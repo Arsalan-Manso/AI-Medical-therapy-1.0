@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import heroImage from "../assets/hero.png";
 
 const stats = [
@@ -75,6 +76,15 @@ const benefits = [
 ];
 
 const HomePage = () => {
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const roleOptions = [
+    { label: "Admin", route: "/admin_login" },
+    { label: "Doctor", route: "/doctor_login" },
+    { label: "Patient", route: "/patient_login" },
+    { label: "Pharmacy", route: "/pharmacy_login" },
+  ];
+
   return (
     <div className="lp-root">
       {/* ── Navbar ── */}
@@ -87,11 +97,37 @@ const HomePage = () => {
               <div className="lp-brand-sub">Care · Clarity · Coordination</div>
             </div>
           </div>
+
+          <nav className="lp-nav-center">
+            <a href="#products" className="lp-nav-link">Products</a>
+            <a href="#how-it-works" className="lp-nav-link">How It Works</a>
+            <a href="#role-portal" className="lp-nav-link">Role of Portal</a>
+            <a href="#contact" className="lp-nav-link">Contact</a>
+          </nav>
+
           <nav className="lp-nav-links">
-            <Link to="/admin_login" className="lp-nav-btn">Admin</Link>
-            <Link to="/doctor_login" className="lp-nav-btn">Doctor</Link>
-            <Link to="/patient_login" className="lp-nav-btn">Patient</Link>
-            <Link to="/pharmacy_login" className="lp-nav-btn lp-nav-btn--cta">Pharmacy</Link>
+            <div className="lp-nav-dropdown">
+              <button
+                className="lp-nav-btn lp-nav-btn--cta"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
+                Get Started ▼
+              </button>
+              {showDropdown && (
+                <div className="lp-dropdown-menu">
+                  {roleOptions.map((role) => (
+                    <Link
+                      key={role.label}
+                      to={role.route}
+                      className="lp-dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      {role.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
       </header>
@@ -118,7 +154,7 @@ const HomePage = () => {
           </div>
           <div className="lp-hero-visual">
             <img src={heroImage} alt="Platform illustration" />
-            <div className="lp-hero-badge">✅ 24/7 Coordinated Digital Care</div>
+            <div className="lp-hero-badge"> 24/7 Coordinated Digital Care</div>
           </div>
         </div>
       </section>
@@ -136,7 +172,7 @@ const HomePage = () => {
       </section>
 
       {/* ── How It Works ── */}
-      <section className="lp-section">
+      <section className="lp-section" id="how-it-works">
         <div className="shell">
           <div className="lp-section-head">
             <span className="lp-tag">How It Works</span>
@@ -156,7 +192,7 @@ const HomePage = () => {
       </section>
 
       {/* ── Role Portals ── */}
-      <section className="lp-section lp-section--alt">
+      <section className="lp-section lp-section--alt" id="role-portal">
         <div className="shell">
           <div className="lp-section-head">
             <span className="lp-tag">Role Portals</span>
@@ -187,7 +223,7 @@ const HomePage = () => {
       </section>
 
       {/* ── Benefits ── */}
-      <section className="lp-section">
+      <section className="lp-section" id="products">
         <div className="shell">
           <div className="lp-section-head">
             <span className="lp-tag">Why Choose Us</span>
@@ -220,8 +256,8 @@ const HomePage = () => {
             </p>
             <div className="lp-contact-details">
               <a href="mailto:support@aimedicaltherapy.com">📧 support@aimedicaltherapy.com</a>
-              <a href="tel:+923001112233">📞 +92 300 111 2233</a>
-              <span>📍 Lahore, Pakistan</span>
+              <a href="tel:+923495023007">📞 +92 349 502 3007</a>
+              <span>📍 Islamabad, Pakistan</span>
             </div>
           </div>
           <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
@@ -272,7 +308,7 @@ const HomePage = () => {
           </div>
         </div>
         <div className="lp-footer-bottom shell">
-          <p>© 2026 AI Medical Therapy. All rights reserved. Built with ❤️ for better healthcare.</p>
+          <p>© 2026 AI Medical Therapy. All rights reserved. Built with  for better healthcare.</p>
         </div>
       </footer>
     </div>
