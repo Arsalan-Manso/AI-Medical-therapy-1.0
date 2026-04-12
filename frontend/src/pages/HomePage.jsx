@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import heroImage from "../assets/hero.png";
+import hero2Image from "../assets/hero2.png";
 
 const stats = [
   { value: "10,000+", label: "Patients Served" },
@@ -153,8 +154,18 @@ const HomePage = () => {
             </div>
           </div>
           <div className="lp-hero-visual">
-            <img src={heroImage} alt="Platform illustration" />
+            <div className="lp-hero-images">
+              <img src={hero2Image} alt="Platform illustration" />
+            </div>
             <div className="lp-hero-badge"> 24/7 Coordinated Digital Care</div>
+          </div>
+          <div className="lp-hero-visual-secondary">
+            <img src={heroImage} alt="Additional platform illustration" />
+            <div className="lp-hero-badge"> Advanced AI Features</div>
+          </div>
+          <div className="lp-hero-visual-tertiary">
+            <img src={hero2Image} alt="Third platform illustration" />
+            <div className="lp-hero-badge"> Smart Integration</div>
           </div>
         </div>
       </section>
