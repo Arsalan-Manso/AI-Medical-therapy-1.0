@@ -82,7 +82,7 @@ const AuthPage = ({ mode }) => {
     try {
       const payload = { email: form.email, password: form.password, type: roleName };
       if (mode === "signup") payload.name = form.name;
-      const endpoint = mode === "signup" ? "/auth/signup" : "/auth/login";
+      const endpoint = mode === "signup" ? "/register" : "/login";
       const { data } = await api.post(endpoint, payload);
       login({ token: data.token, user: data.user });
       navigate(`/dashboard/${roleRouteSegment(roleName)}`);

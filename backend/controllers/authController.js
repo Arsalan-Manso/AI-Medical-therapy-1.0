@@ -79,7 +79,7 @@ const login = async (req, res) => {
     }
 
     const token = createToken(user._id, user.type);
-
+console.log(`User ${user.email} logged in as ${user.type}`);
     return res.status(200).json({
       message: "Login successful",
       token,
