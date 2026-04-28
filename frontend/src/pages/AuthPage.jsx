@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../utils/api";
 import { roleFromParam, roleRouteSegment } from "../constants/roles";
@@ -6,12 +6,12 @@ import { useAuth } from "../context/useAuth";
 
 const roleConfig = {
   Admin: {
-    gradient: "linear-gradient(145deg, #3730a3 0%, #6d28d9 100%)",
+    gradient: "linear-gradient(145deg, #0f172a 0%, #134e4a 55%, #0d9488 100%)",
     icon: "⚙️",
     label: "System Administrator",
-    tagline: "Full control. Total visibility. One powerful admin centre.",
-    features: ["Manage all users & roles", "View reports & analytics", "Control system-wide settings"],
-    accent: "#4f46e5",
+    tagline: "Command centre for verification, users, and platform oversight.",
+    features: ["Doctor verification (PK)", "Secure document review", "Approve or reject applications"],
+    accent: "#14b8a6",
   },
   Doctor: {
     gradient: "linear-gradient(145deg, #0e7490 0%, #0284c7 100%)",
@@ -23,19 +23,19 @@ const roleConfig = {
   },
   Patient: {
     gradient: "linear-gradient(145deg, #047857 0%, #0d9488 100%)",
-    icon: "💊",
+    icon: "👤",
     label: "Patient Portal",
     tagline: "Your health journey, tracked and organised in one place.",
     features: ["Book & track appointments", "View medical history", "Access billing & reports"],
     accent: "#059669",
   },
   Pharmacy: {
-    gradient: "linear-gradient(145deg, #6d28d9 0%, #9333ea 100%)",
-    icon: "🏥",
+    gradient: "linear-gradient(145deg, #0c4a6e 0%, #0369a1 45%, #0ea5e9 100%)",
+    icon: "🧴",
     label: "Pharmacy Management",
-    tagline: "Streamlined prescription processing and inventory control.",
+    tagline: "Prescription flow, inventory, and fulfilment in one workspace.",
     features: ["Process prescriptions", "Manage inventory levels", "Track fulfilment orders"],
-    accent: "#7c3aed",
+    accent: "#0284c7",
   },
 };
 
@@ -43,7 +43,7 @@ const AuthPage = ({ mode }) => {
   const { role } = useParams();
   const roleName = roleFromParam(role);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
 
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
@@ -56,6 +56,17 @@ const AuthPage = ({ mode }) => {
     () => (mode === "signup" ? "Create Your Account" : "Welcome Back"),
     [mode]
   );
+
+  useEffect(() => {
+    if (!isAuthenticated || !user || !roleName) return;
+    navigate(`/dashboard/${roleRouteSegment(user.type)}`, { replace: true });
+  }, [isAuthenticated, user, roleName, navigate]);
+
+  useEffect(() => {
+    if (roleName === "Admin" && mode === "signup") {
+      navigate(`/auth/${role}/login`, { replace: true });
+    }
+  }, [roleName, mode, role, navigate]);
 
   if (!roleName) {
     return (
@@ -82,7 +93,7 @@ const AuthPage = ({ mode }) => {
     try {
       const payload = { email: form.email, password: form.password, type: roleName };
       if (mode === "signup") payload.name = form.name;
-      const endpoint = mode === "signup" ? "/register" : "/login";
+      const endpoint = mode === "signup" ? "/auth/register" : "/auth/login";
       const { data } = await api.post(endpoint, payload);
       login({ token: data.token, user: data.user });
       navigate(`/dashboard/${roleRouteSegment(roleName)}`);
@@ -129,103 +140,151 @@ const AuthPage = ({ mode }) => {
                 ? `Fill in the details below to create your ${roleName} account.`
                 : `Enter your credentials to access the ${roleName} dashboard.`}
             </p>
+            {roleName === "Admin" && mode === "login" && (
+              <div className="auth-admin-notice">
+                <strong>Sign-in only.</strong> Admin accounts are not self-registered. Use the default
+                console account: <code>Admin@gmail.com</code> · <code>admin123</code> (email is not
+                case-sensitive).
+              </div>
+            )}
           </div>
 
-          <form className="auth-form-body" onSubmit={onSubmit}>
-            {mode === "signup" && (
+          {mode === "signup" && roleName === "Doctor" ? (
+            <div className="auth-form-body">
+              <p style={{ color: "#475569", lineHeight: 1.6, marginBottom: 20 }}>
+                Pakistan-based doctors register with <strong>CNIC</strong>,{" "}
+                <strong>+92 mobile</strong>, and secure document uploads. An admin verifies your
+                profile before you can access clinical tools.
+              </p>
+              <Link
+                className="auth-submit-btn"
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  background: config.gradient,
+                  textDecoration: "none",
+                  marginBottom: 16,
+                }}
+                to="/auth/doctor/register"
+              >
+                Start verified signup →
+              </Link>
+              <p style={{ textAlign: "center", color: "#64748b" }}>
+                Already verified?{" "}
+                <Link to={`/auth/${role}/login`} style={{ color: config.accent, fontWeight: 700 }}>
+                  Log in
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <form className="auth-form-body" onSubmit={onSubmit}>
+              {mode === "signup" && (
+                <div className="auth-field">
+                  <label>Full Name</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon">👤</span>
+                    <input
+                      required
+                      name="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={form.name}
+                      onChange={onChange}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="auth-field">
-                <label>Full Name</label>
+                <label>Email Address</label>
                 <div className="auth-input-wrap">
-                  <span className="auth-input-icon">👤</span>
+                  <span className="auth-input-icon">✉️</span>
                   <input
                     required
-                    name="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={form.name}
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={form.email}
                     onChange={onChange}
                   />
                 </div>
               </div>
-            )}
 
-            <div className="auth-field">
-              <label>Email Address</label>
-              <div className="auth-input-wrap">
-                <span className="auth-input-icon">✉️</span>
-                <input
-                  required
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={form.email}
-                  onChange={onChange}
-                />
+              <div className="auth-field">
+                <label>Password</label>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon">🔒</span>
+                  <input
+                    required
+                    name="password"
+                    type={showPass ? "text" : "password"}
+                    placeholder={mode === "signup" ? "Min. 6 characters" : "Enter your password"}
+                    minLength={6}
+                    value={form.password}
+                    onChange={onChange}
+                  />
+                  <button type="button" className="auth-toggle-pass" onClick={() => setShowPass((p) => !p)}>
+                    {showPass ? "🙈" : "👁️"}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="auth-field">
-              <label>Password</label>
-              <div className="auth-input-wrap">
-                <span className="auth-input-icon">🔒</span>
-                <input
-                  required
-                  name="password"
-                  type={showPass ? "text" : "password"}
-                  placeholder={mode === "signup" ? "Min. 6 characters" : "Enter your password"}
-                  minLength={6}
-                  value={form.password}
-                  onChange={onChange}
-                />
-                <button type="button" className="auth-toggle-pass" onClick={() => setShowPass((p) => !p)}>
-                  {showPass ? "🙈" : "👁️"}
-                </button>
+              <div className="auth-field">
+                <label>Portal Type</label>
+                <div className="auth-input-wrap auth-input-wrap--locked">
+                  <span className="auth-input-icon">{config.icon}</span>
+                  <input value={roleName} disabled />
+                  <span className="auth-lock-badge">🔒 Locked</span>
+                </div>
               </div>
-            </div>
 
-            <div className="auth-field">
-              <label>Portal Type</label>
-              <div className="auth-input-wrap auth-input-wrap--locked">
-                <span className="auth-input-icon">{config.icon}</span>
-                <input value={roleName} disabled />
-                <span className="auth-lock-badge">🔒 Locked</span>
-              </div>
-            </div>
-
-            {error && (
-              <div className="auth-error-msg">
-                <span>⚠️</span> {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              style={{ background: config.gradient }}
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="auth-spinner">⏳ Please wait...</span>
-              ) : mode === "signup" ? (
-                `Create ${roleName} Account →`
-              ) : (
-                `Login to ${roleName} Dashboard →`
+              {error && (
+                <div className="auth-error-msg">
+                  <span>⚠️</span> {error}
+                </div>
               )}
-            </button>
-          </form>
+
+              <button
+                type="submit"
+                className="auth-submit-btn"
+                style={{ background: config.gradient }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="auth-spinner">⏳ Please wait...</span>
+                ) : mode === "signup" ? (
+                  `Create ${roleName} Account →`
+                ) : (
+                  `Login to ${roleName} Dashboard →`
+                )}
+              </button>
+            </form>
+          )}
 
           <div className="auth-form-footer">
-            {mode === "signup" ? (
-              <p>Already have an account?{" "}
-                <Link to={`/auth/${role}/login`} style={{ color: config.accent }}>Login here</Link>
-              </p>
-            ) : (
-              <p>Don&apos;t have an account?{" "}
-                <Link to={`/auth/${role}/signup`} style={{ color: config.accent }}>Sign up free</Link>
-              </p>
-            )}
+            {!(mode === "signup" && roleName === "Doctor") &&
+              (mode === "signup" ? (
+                <p>
+                  Already have an account?{" "}
+                  <Link to={`/auth/${role}/login`} style={{ color: config.accent }}>
+                    Login here
+                  </Link>
+                </p>
+              ) : (
+                roleName !== "Admin" && (
+                  <p>
+                    Don&apos;t have an account?{" "}
+                    <Link to={`/auth/${role}/signup`} style={{ color: config.accent }}>
+                      Sign up free
+                    </Link>
+                  </p>
+                )
+              ))}
             <p>
-              <Link to="/" style={{ color: "#64748b" }}>← Go back to role selector</Link>
+              <Link to="/" style={{ color: "#64748b" }}>
+                ← Go back to role selector
+              </Link>
             </p>
           </div>
         </div>
