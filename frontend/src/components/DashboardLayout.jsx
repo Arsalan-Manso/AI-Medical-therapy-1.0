@@ -38,7 +38,7 @@ const DashboardLayout = () => {
       <main className="dashboard-main">
         <header>
           <h1>{user.type} Dashboard</h1>
-          <p>Welcome back, {user.name}. You are logged in as {user.type}.</p>
+          <p>sadfdgfbhgfdf back, {user.name}. You are logged in as {user.type}.</p>
         </header>
         <section className="dashboard-cards">
           <div className="stat-card">

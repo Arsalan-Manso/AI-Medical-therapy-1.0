@@ -1,13 +1,45 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/useAuth";
+import { roleRouteSegment } from "../constants/roles";
+import { api } from "../utils/api";
 import heroImage from "../assets/hero.png";
 import hero2Image from "../assets/hero2.png";
 
-const stats = [
-  { value: "10,000+", label: "Patients Served" },
-  { value: "500+", label: "Doctors Onboarded" },
-  { value: "200+", label: "Pharmacies Linked" },
-  { value: "99.9%", label: "Uptime Guaranteed" },
+const BrandMark = ({ light, className = "" }) => (
+  <svg
+    className={`lp-brand-mark ${className}`}
+    viewBox="0 0 40 40"
+    width="40"
+    height="40"
+    aria-hidden
+  >
+    <rect
+      x="2"
+      y="2"
+      width="36"
+      height="36"
+      rx="10"
+      fill="none"
+      stroke={light ? "#e2e8f0" : "#0a0a0a"}
+      strokeWidth="2"
+    />
+    <path
+      d="M20 11v18M11 20h18"
+      stroke={light ? "#e2e8f0" : "#0a0a0a"}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const formatStatCount = (n) => (Number.isFinite(n) ? n.toLocaleString() : "—");
+
+const buildStatsRows = (data) => [
+  { value: formatStatCount(data?.patientsServed), label: "Patients Served" },
+  { value: formatStatCount(data?.doctorsOnboarded), label: "Doctors Onboarded" },
+  { value: formatStatCount(data?.pharmaciesLinked), label: "Pharmacies Linked" },
+  { value: data?.uptimeGuaranteed ?? "—", label: "Uptime Guaranteed" },
 ];
 
 const steps = [
@@ -33,8 +65,8 @@ const portals = [
     role: "Admin",
     route: "/admin_login",
     icon: "⚙️",
-    color: "#4f46e5",
-    bg: "#eef2ff",
+    theme: "admin",
+    hideSignup: true,
     desc: "Manage users, monitor operations, and control system-wide settings from a central dashboard.",
     features: ["User Management", "System Analytics", "Full Access Control"],
   },
@@ -42,26 +74,21 @@ const portals = [
     role: "Doctor",
     route: "/doctor_login",
     icon: "🩺",
-    color: "#0891b2",
-    bg: "#ecfeff",
     desc: "Access patient records, write prescriptions, manage appointments and treatment notes efficiently.",
     features: ["Appointments", "Prescriptions", "Patient Records"],
   },
   {
     role: "Patient",
     route: "/patient_login",
-    icon: "💊",
-    color: "#059669",
-    bg: "#ecfdf5",
+    icon: "👤",
     desc: "Book appointments, view medical history, track your treatment plans and billing summaries.",
     features: ["Book Appointments", "Medical History", "Billing & Reports"],
   },
   {
     role: "Pharmacy",
     route: "/pharmacy_login",
-    icon: "🏥",
-    color: "#7c3aed",
-    bg: "#f5f3ff",
+    icon: "🧴",
+    theme: "pharmacy",
     desc: "Process prescriptions, manage inventory and handle order fulfillment from one streamlined view.",
     features: ["Prescriptions", "Inventory", "Order Tracking"],
   },
@@ -76,14 +103,104 @@ const benefits = [
   { icon: "🛠️", title: "Easy to Extend", desc: "Modular codebase ready for custom feature additions." },
 ];
 
+const dashboardForRole = (role) => `/dashboard/${roleRouteSegment(role)}`;
+
+const loginRouteForRole = (role) => {
+  const map = {
+    Admin: "/admin_login",
+    Doctor: "/doctor_login",
+    Patient: "/patient_login",
+    Pharmacy: "/pharmacy_login",
+  };
+  return map[role] || "/";
+};
+
 const HomePage = () => {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [platformStats, setPlatformStats] = useState(null);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [contactStatus, setContactStatus] = useState({ type: "", text: "" });
+  const [contactSending, setContactSending] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
+  const goHomeTop = (e) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/public/stats")
+      .then(({ data }) => {
+        if (!cancelled) setPlatformStats(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlatformStats({
+            patientsServed: 0,
+            doctorsOnboarded: 0,
+            pharmaciesLinked: 0,
+            uptimeGuaranteed: "99.9%",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const statsRows = buildStatsRows(platformStats);
+
+  const onContactChange = (e) => {
+    const { name, value } = e.target;
+    setContactForm((prev) => ({ ...prev, [name]: value }));
+    if (contactStatus.text) setContactStatus({ type: "", text: "" });
+  };
+
+  const onContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactSending(true);
+    setContactStatus({ type: "", text: "" });
+    try {
+      const { data } = await api.post("/public/contact", {
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim(),
+        subject: contactForm.subject.trim(),
+        message: contactForm.message.trim(),
+      });
+      setContactStatus({ type: "success", text: data.message || "Message sent." });
+      setContactForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      setContactStatus({
+        type: "error",
+        text: err.response?.data?.message || "Could not send. Please try again.",
+      });
+    } finally {
+      setContactSending(false);
+    }
+  };
+
+  const portalEntry = (role) =>
+    isAuthenticated && user?.type === role ? dashboardForRole(role) : loginRouteForRole(role);
 
   const roleOptions = [
-    { label: "Admin", route: "/admin_login" },
-    { label: "Doctor", route: "/doctor_login" },
-    { label: "Patient", route: "/patient_login" },
-    { label: "Pharmacy", route: "/pharmacy_login" },
+    { label: "Admin", route: portalEntry("Admin") },
+    { label: "Doctor", route: portalEntry("Doctor") },
+    { label: "Patient", route: portalEntry("Patient") },
+    { label: "Pharmacy", route: portalEntry("Pharmacy") },
   ];
 
   return (
@@ -91,13 +208,13 @@ const HomePage = () => {
       {/* ── Navbar ── */}
       <header className="lp-nav">
         <div className="lp-nav-inner shell">
-          <div className="lp-brand">
-            <span className="lp-brand-icon">🏥</span>
+          <Link to="/" className="lp-brand lp-brand--link" onClick={goHomeTop}>
+            <BrandMark light className="lp-brand-icon" />
             <div>
               <div className="lp-brand-name">AI Medical Therapy</div>
               <div className="lp-brand-sub">Care · Clarity · Coordination</div>
             </div>
-          </div>
+          </Link>
 
           <nav className="lp-nav-center">
             <a href="#products" className="lp-nav-link">Products</a>
@@ -107,6 +224,15 @@ const HomePage = () => {
           </nav>
 
           <nav className="lp-nav-links">
+            {isAuthenticated && user?.type && (
+              <Link
+                to={dashboardForRole(user.type)}
+                className="lp-nav-btn"
+                style={{ marginRight: 10 }}
+              >
+                My dashboard
+              </Link>
+            )}
             <div className="lp-nav-dropdown">
               <button
                 className="lp-nav-btn lp-nav-btn--cta"
@@ -138,7 +264,7 @@ const HomePage = () => {
         <div className="lp-hero-glow" />
         <div className="shell lp-hero-inner">
           <div className="lp-hero-copy">
-            <span className="lp-tag">AI Medical Therapy Platform</span>
+            <span className="lp-tag lp-tag--hero-dark">AI Medical Therapy Platform</span>
             <h1 className="lp-hero-h1">
               A Smarter Way to Manage<br />
               <span className="lp-hero-accent">Medical Therapy & Care</span>
@@ -171,11 +297,15 @@ const HomePage = () => {
       </section>
 
       {/* ── Stats ── */}
-      <section className="lp-stats">
+      <section className="lp-stats lp-stats--dark-metrics">
         <div className="shell lp-stats-grid">
-          {stats.map((s) => (
+          {statsRows.map((s) => (
             <div className="lp-stat" key={s.label}>
-              <span className="lp-stat-value">{s.value}</span>
+              <span
+                className={`lp-stat-value${platformStats ? "" : " lp-stat-value--pending"}`}
+              >
+                {s.value}
+              </span>
               <span className="lp-stat-label">{s.label}</span>
             </div>
           ))}
@@ -212,7 +342,10 @@ const HomePage = () => {
           </div>
           <div className="lp-portals">
             {portals.map((p) => (
-              <div className="lp-portal-card" key={p.role} style={{ "--pc": p.color, "--pb": p.bg }}>
+              <div
+                className={`lp-portal-card${p.theme ? ` lp-portal-card--${p.theme}` : ""}`}
+                key={p.role}
+              >
                 <div className="lp-portal-icon">{p.icon}</div>
                 <h3 className="lp-portal-role">{p.role}</h3>
                 <p className="lp-portal-desc">{p.desc}</p>
@@ -221,11 +354,23 @@ const HomePage = () => {
                     <li key={f}>✓ {f}</li>
                   ))}
                 </ul>
-                <div className="lp-portal-actions">
-                  <Link to={p.route} className="lp-portal-btn">Login</Link>
-                  <Link to={`/auth/${p.role.toLowerCase()}/signup`} className="lp-portal-btn lp-portal-btn--ghost">
-                    Sign Up
+                <div
+                  className={`lp-portal-actions${p.hideSignup ? " lp-portal-actions--single" : ""}`}
+                >
+                  <Link
+                    to={isAuthenticated && user?.type === p.role ? dashboardForRole(p.role) : p.route}
+                    className="lp-portal-btn"
+                  >
+                    {isAuthenticated && user?.type === p.role ? "Open dashboard" : "Login"}
                   </Link>
+                  {!p.hideSignup && (
+                    <Link
+                      to={`/auth/${p.role.toLowerCase()}/signup`}
+                      className="lp-portal-btn lp-portal-btn--ghost"
+                    >
+                      Sign Up
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
@@ -271,14 +416,71 @@ const HomePage = () => {
               <span>📍 Islamabad, Pakistan</span>
             </div>
           </div>
-          <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
+          <form className="lp-contact-form" onSubmit={onContactSubmit}>
             <h3>Send a Message</h3>
-            <input type="text" placeholder="Your full name" />
-            <input type="email" placeholder="Email address" />
-            <input type="text" placeholder="Subject" />
-            <textarea rows={4} placeholder="Your message..." />
-            <button type="submit" className="lp-btn" style={{ width: "100%" }}>
-              Send Message
+            <p className="lp-contact-form-hint">
+              Messages go to the platform administrator and are stored securely for follow-up.
+            </p>
+            {contactStatus.text && (
+              <div
+                className={`lp-contact-feedback${contactStatus.type === "success" ? " lp-contact-feedback--ok" : " lp-contact-feedback--err"}`}
+                role="status"
+              >
+                {contactStatus.text}
+              </div>
+            )}
+            <label className="lp-contact-label" htmlFor="contact-name">
+              Full name
+            </label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              required
+              autoComplete="name"
+              placeholder="Your full name"
+              value={contactForm.name}
+              onChange={onContactChange}
+            />
+            <label className="lp-contact-label" htmlFor="contact-email">
+              Email
+            </label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Email address"
+              value={contactForm.email}
+              onChange={onContactChange}
+            />
+            <label className="lp-contact-label" htmlFor="contact-subject">
+              Subject <span className="lp-contact-optional">(optional)</span>
+            </label>
+            <input
+              id="contact-subject"
+              name="subject"
+              type="text"
+              placeholder="What is this about?"
+              value={contactForm.subject}
+              onChange={onContactChange}
+            />
+            <label className="lp-contact-label" htmlFor="contact-message">
+              Message
+            </label>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows={4}
+              required
+              minLength={5}
+              placeholder="Your message…"
+              value={contactForm.message}
+              onChange={onContactChange}
+            />
+            <button type="submit" className="lp-btn" style={{ width: "100%" }} disabled={contactSending}>
+              {contactSending ? "Sending…" : "Send Message"}
             </button>
           </form>
         </div>
@@ -287,13 +489,13 @@ const HomePage = () => {
       {/* ── Footer ── */}
       <footer className="lp-footer">
         <div className="shell lp-footer-inner">
-          <div className="lp-footer-brand">
-            <span style={{ fontSize: 28 }}>🏥</span>
+          <Link to="/" className="lp-footer-brand lp-brand--link" onClick={goHomeTop}>
+            <BrandMark light className="lp-footer-brand-mark" />
             <div>
               <div className="lp-footer-name">AI Medical Therapy</div>
               <div className="lp-footer-tagline">Care · Clarity · Coordination</div>
             </div>
-          </div>
+          </Link>
           <div className="lp-footer-cols">
             <div className="lp-footer-col">
               <div className="lp-footer-col-title">Portals</div>
@@ -304,7 +506,6 @@ const HomePage = () => {
             </div>
             <div className="lp-footer-col">
               <div className="lp-footer-col-title">Sign Up</div>
-              <Link to="/auth/admin/signup">Admin Sign Up</Link>
               <Link to="/auth/doctor/signup">Doctor Sign Up</Link>
               <Link to="/auth/patient/signup">Patient Sign Up</Link>
               <Link to="/auth/pharmacy/signup">Pharmacy Sign Up</Link>

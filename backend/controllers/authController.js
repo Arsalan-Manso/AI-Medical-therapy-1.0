@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { publicDoctorUser } = require("./doctorRegisterController");
 
 const allowedTypes = ["Admin", "Doctor", "Patient", "Pharmacy"];
 
@@ -19,7 +20,23 @@ const signup = async (req, res) => {
       return res.status(400).json({ message: "Invalid type" });
     }
 
-    const existingUser = await User.findOne({ email });
+    if (type === "Admin") {
+      return res.status(403).json({
+        message:
+          "Admin accounts are not self-service. Use the administrator sign-in portal with your issued credentials.",
+      });
+    }
+
+    if (type === "Doctor") {
+      return res.status(400).json({
+        message:
+          "Doctors must register with CNIC verification and document upload. Use the doctor verification portal.",
+        code: "DOCTOR_USE_VERIFICATION_PORTAL",
+      });
+    }
+
+    const emailNorm = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: emailNorm });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -28,7 +45,7 @@ const signup = async (req, res) => {
 
     const user = await User.create({
       name,
-      email,
+      email: emailNorm,
       password: hashedPassword,
       type,
     });
@@ -62,7 +79,8 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid type" });
     }
 
-    const user = await User.findOne({ email });
+    const emailNorm = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: emailNorm });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -79,16 +97,21 @@ const login = async (req, res) => {
     }
 
     const token = createToken(user._id, user.type);
-console.log(`User ${user.email} logged in as ${user.type}`);
+
+    const userPayload =
+      user.type === "Doctor"
+        ? publicDoctorUser(user)
+        : {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            type: user.type,
+          };
+
     return res.status(200).json({
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        type: user.type,
-      },
+      user: userPayload,
     });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -101,7 +124,19 @@ const me = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    return res.status(200).json({ user });
+    if (user.type === "Doctor") {
+      return res.status(200).json({ user: publicDoctorUser(user) });
+    }
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        type: user.type,
+        patientProfile: user.patientProfile || null,
+        doctorProfile: user.doctorProfile || null,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
