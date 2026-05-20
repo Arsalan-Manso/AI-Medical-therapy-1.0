@@ -5,11 +5,13 @@ import PatientDashboardPage from "./pages/PatientDashboardPage";
 import AuthPage from "./pages/AuthPage";
 import DoctorRegisterPage from "./pages/DoctorRegisterPage";
 import HomePage from "./pages/HomePage";
+import AIChatPage from "./pages/AIChatPage";
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/ai-chat" element={<AIChatPage />} />
       <Route path="/auth/:role/login" element={<AuthPage mode="login" />} />
       <Route path="/auth/admin/signup" element={<Navigate to="/auth/admin/login" replace />} />
       <Route path="/auth/:role/signup" element={<AuthPage mode="signup" />} />

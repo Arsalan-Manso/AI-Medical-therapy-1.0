@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const { normalizePhone, isValidPkPhone } = require("../utils/pkValidation");
+const { validateName } = require("../utils/authValidation");
 
 const allowedGender = ["male", "female", "other", "prefer_not_to_say"];
 
@@ -27,7 +28,7 @@ const getProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error." });
   }
 };
 
@@ -80,7 +81,14 @@ const updateProfile = async (req, res) => {
 
     const trimmedName = String(fullName).trim();
     if (!trimmedName) {
-      return res.status(400).json({ message: "Full name is required" });
+      return res.status(400).json({ message: "Full name is required." });
+    }
+    if (!validateName(trimmedName)) {
+      return res.status(400).json({ message: "Name must contain letters only." });
+    }
+    const trimmedEmergencyName = String(emergencyContactName || "").trim();
+    if (trimmedEmergencyName && !validateName(trimmedEmergencyName)) {
+      return res.status(400).json({ message: "Emergency contact name must contain letters only." });
     }
 
     const user = await User.findById(req.user.userId);
@@ -130,7 +138,7 @@ const updateProfile = async (req, res) => {
           : prev.addressLine || "",
       emergencyContactName:
         emergencyContactName !== undefined && emergencyContactName !== null
-          ? String(emergencyContactName).trim()
+          ? trimmedEmergencyName
           : prev.emergencyContactName || "",
       emergencyContactPhone: emergPhone,
       bloodType:
@@ -151,7 +159,7 @@ const updateProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error." });
   }
 };
 

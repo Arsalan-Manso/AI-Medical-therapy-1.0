@@ -29,6 +29,7 @@ const appointmentRequestSchema = new mongoose.Schema(
     },
     scheduledAt: { type: Date },
     doctorMessage: { type: String, trim: true, maxlength: 1000, default: "" },
+    prescription: { type: String, trim: true, maxlength: 4000, default: "" },
   },
   { timestamps: true }
 );

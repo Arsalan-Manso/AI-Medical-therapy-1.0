@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../context/useAuth";
 import { roleRouteSegment } from "../constants/roles";
 import { api } from "../utils/api";
 import heroImage from "../assets/hero.png";
 import hero2Image from "../assets/hero2.png";
+import doctorIcon from "../assets/doctor.png";
+import pharmacyIcon from "../assets/pharmacy.png";
 
 const BrandMark = ({ light, className = "" }) => (
   <svg
@@ -73,7 +75,8 @@ const portals = [
   {
     role: "Doctor",
     route: "/doctor_login",
-    icon: "🩺",
+    icon: doctorIcon,
+    iconType: "image",
     desc: "Access patient records, write prescriptions, manage appointments and treatment notes efficiently.",
     features: ["Appointments", "Prescriptions", "Patient Records"],
   },
@@ -87,7 +90,8 @@ const portals = [
   {
     role: "Pharmacy",
     route: "/pharmacy_login",
-    icon: "🧴",
+    icon: pharmacyIcon,
+    iconType: "image",
     theme: "pharmacy",
     desc: "Process prescriptions, manage inventory and handle order fulfillment from one streamlined view.",
     features: ["Prescriptions", "Inventory", "Order Tracking"],
@@ -95,15 +99,66 @@ const portals = [
 ];
 
 const benefits = [
-  { icon: "🔒", title: "Secure Role-Based Auth", desc: "JWT-protected login per role. No cross-access." },
-  { icon: "⚡", title: "Fast MERN Stack", desc: "Built on MongoDB, Express, React, and Node.js." },
-  { icon: "📱", title: "Fully Responsive", desc: "Works seamlessly on desktop, tablet, and mobile." },
-  { icon: "📊", title: "Real-Time Dashboards", desc: "Live metrics and role-specific analytics panels." },
-  { icon: "🔄", title: "End-to-End Coordination", desc: "Connects every actor in the medical workflow." },
-  { icon: "🛠️", title: "Easy to Extend", desc: "Modular codebase ready for custom feature additions." },
+  {
+    title: "Patient Sign In & Doctor Discovery",
+    desc: "Patients can sign in securely and browse available doctors by role-based access and verified profiles.",
+  },
+  {
+    title: "AI Therapy Support",
+    desc: "Integrated AI-assisted therapy guidance to support users with structured wellness interactions.",
+  },
+  {
+    title: "AI Chatbot",
+    desc: "Smart chatbot layer for first-level help, quick responses, and guided user interactions.",
+  },
+  {
+    title: "Emergency Support Flow",
+    desc: "Emergency-focused journey to quickly connect users with the right medical support pathways.",
+  },
+  {
+    title: "Patient–Doctor Chat",
+    desc: "Built-in communication flow for patients and doctors to discuss treatment, symptoms, and follow-up.",
+  },
+  {
+    title: "Appointments with Doctor",
+    desc: "Patients can create appointment requests and doctors can manage approvals and scheduling.",
+  },
+  {
+    title: "Doctor Login & Request Management",
+    desc: "Doctors sign in to their portal, view incoming requests, and respond using dedicated dashboard tools.",
+  },
+  {
+    title: "Pharmacy & Medicine Check",
+    desc: "Pharmacy module supports medicine-related workflows with role-based visibility and operation controls.",
+  },
+  {
+    title: "Admin Monitoring & Verification",
+    desc: "Admin dashboard handles doctor verification, status control, and cross-module operational tracking.",
+  },
 ];
 
 const dashboardForRole = (role) => `/dashboard/${roleRouteSegment(role)}`;
+const nameRegex = /^[A-Za-z ]{2,80}$/;
+const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const blockedEmailDomains = new Set([
+  "tempmail.com",
+  "10minutemail.com",
+  "mailinator.com",
+  "guerrillamail.com",
+  "yopmail.com",
+]);
+const isAuthenticEmail = (email) => {
+  const value = String(email || "").trim().toLowerCase();
+  if (!emailRegex.test(value)) return false;
+  const [localPart = "", domain = ""] = value.split("@");
+  if (!localPart || !domain) return false;
+  if (localPart.startsWith(".") || localPart.endsWith(".")) return false;
+  if (value.includes("..")) return false;
+  if (domain.startsWith("-") || domain.endsWith("-")) return false;
+  if (!domain.includes(".")) return false;
+  if (blockedEmailDomains.has(domain)) return false;
+  return true;
+};
 
 const loginRouteForRole = (role) => {
   const map = {
@@ -128,6 +183,10 @@ const HomePage = () => {
   });
   const [contactStatus, setContactStatus] = useState({ type: "", text: "" });
   const [contactSending, setContactSending] = useState(false);
+  const benefitColumns = useMemo(
+    () => [benefits.slice(0, 3), benefits.slice(3, 6), benefits.slice(6, 9)],
+    []
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -175,9 +234,15 @@ const HomePage = () => {
     setContactSending(true);
     setContactStatus({ type: "", text: "" });
     try {
+      if (!nameRegex.test(contactForm.name.trim())) {
+        throw new Error("Name must contain letters only.");
+      }
+      if (!isAuthenticEmail(contactForm.email)) {
+        throw new Error("Enter a valid email.");
+      }
       const { data } = await api.post("/public/contact", {
         name: contactForm.name.trim(),
-        email: contactForm.email.trim(),
+        email: contactForm.email.trim().toLowerCase(),
         subject: contactForm.subject.trim(),
         message: contactForm.message.trim(),
       });
@@ -186,7 +251,7 @@ const HomePage = () => {
     } catch (err) {
       setContactStatus({
         type: "error",
-        text: err.response?.data?.message || "Could not send. Please try again.",
+        text: err.response?.data?.message || "Could not send message.",
       });
     } finally {
       setContactSending(false);
@@ -346,7 +411,9 @@ const HomePage = () => {
                 className={`lp-portal-card${p.theme ? ` lp-portal-card--${p.theme}` : ""}`}
                 key={p.role}
               >
-                <div className="lp-portal-icon">{p.icon}</div>
+                <div className="lp-portal-icon">
+                  {p.iconType === "image" ? <img src={p.icon} alt={`${p.role} icon`} className="lp-portal-icon-img" /> : p.icon}
+                </div>
                 <h3 className="lp-portal-role">{p.role}</h3>
                 <p className="lp-portal-desc">{p.desc}</p>
                 <ul className="lp-portal-features">
@@ -379,21 +446,24 @@ const HomePage = () => {
       </section>
 
       {/* ── Benefits ── */}
-      <section className="lp-section" id="products">
+      <section className="lp-section lp-section--benefits-dark" id="products">
         <div className="shell">
           <div className="lp-section-head">
             <span className="lp-tag">Why Choose Us</span>
             <h2>Built for Real Healthcare Workflows</h2>
             <p>Every feature is designed with medical coordination in mind — no bloat, all purpose.</p>
           </div>
-          <div className="lp-benefits">
-            {benefits.map((b) => (
-              <div className="lp-benefit" key={b.title}>
-                <span className="lp-benefit-icon">{b.icon}</span>
-                <div>
-                  <h4>{b.title}</h4>
-                  <p>{b.desc}</p>
-                </div>
+          <div className="lp-benefit-columns">
+            {benefitColumns.map((group, idx) => (
+              <div className="lp-benefit-column" key={`benefit-group-${idx}`}>
+                {group.map((b) => (
+                  <div className="lp-benefit" key={b.title}>
+                    <div>
+                      <h4>{b.title}</h4>
+                      <p>{b.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -437,6 +507,7 @@ const HomePage = () => {
               name="name"
               type="text"
               required
+              pattern="[A-Za-z ]{2,80}"
               autoComplete="name"
               placeholder="Your full name"
               value={contactForm.name}
@@ -450,6 +521,7 @@ const HomePage = () => {
               name="email"
               type="email"
               required
+              pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
               autoComplete="email"
               placeholder="Email address"
               value={contactForm.email}

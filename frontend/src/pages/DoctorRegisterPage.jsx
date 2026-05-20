@@ -17,6 +17,9 @@ const normPhone = (raw) => {
 const isPkMobile = (s) => /^\+923[0-9]{9}$/.test(s);
 
 const digitsCnic = (s) => String(s || "").replace(/\D/g, "");
+const nameRegex = /^[A-Za-z ]{2,80}$/;
+const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 const STEP_LABELS = ["Account", "Practice", "CNIC", "Review"];
 
@@ -30,6 +33,8 @@ const DoctorRegisterPage = () => {
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,7 +69,7 @@ const DoctorRegisterPage = () => {
         setCitiesByProvince(loc.data.citiesByProvince || {});
         setSpecialties(spec.data.specialties || []);
       } catch {
-        if (!cancelled) setError("Could not load form data. Check API connection.");
+        if (!cancelled) setError("Could not load form data.");
       } finally {
         if (!cancelled) setLoadingMeta(false);
       }
@@ -79,6 +84,11 @@ const DoctorRegisterPage = () => {
     return citiesByProvince[province];
   }, [province, citiesByProvince]);
 
+  const provinceLabel = useMemo(
+    () => provinces.find((p) => p.key === province)?.label || province,
+    [provinces, province]
+  );
+
   useEffect(() => {
     setCity("");
   }, [province]);
@@ -86,8 +96,16 @@ const DoctorRegisterPage = () => {
   const validateStep = useCallback(() => {
     setError("");
     if (step === 0) {
-      if (!name.trim() || !email.trim() || password.length < 6) {
-        setError("Name, email, and password (6+ chars) are required.");
+      if (!nameRegex.test(name.trim())) {
+        setError("Name must contain letters only.");
+        return false;
+      }
+      if (!emailRegex.test(email.trim().toLowerCase())) {
+        setError("Enter a valid email.");
+        return false;
+      }
+      if (!passwordRegex.test(password)) {
+        setError("Password must be 8+ chars with uppercase, lowercase, and number.");
         return false;
       }
       const p = normPhone(phone);
@@ -109,7 +127,7 @@ const DoctorRegisterPage = () => {
         return false;
       }
       if (!cnicFront || !cnicBack || !selfie) {
-        setError("Upload CNIC front, back, and a selfie.");
+        setError("Upload CNIC front, back, and the additional document.");
         return false;
       }
       const okType = (f) => f && /^image\/(jpeg|jpg|png|webp)$/i.test(f.type);
@@ -132,13 +150,27 @@ const DoctorRegisterPage = () => {
 
   const back = () => {
     setError("");
+    if (otpStep) {
+      setOtpStep(false);
+      setOtpCode("");
+      setStep(0);
+      return;
+    }
     setStep((s) => Math.max(s - 1, 0));
   };
 
   const validateAll = () => {
     setError("");
-    if (!name.trim() || !email.trim() || password.length < 6) {
-      setError("Name, email, and password (6+ chars) are required.");
+    if (!nameRegex.test(name.trim())) {
+      setError("Name must contain letters only.");
+      return false;
+    }
+    if (!emailRegex.test(email.trim().toLowerCase())) {
+      setError("Enter a valid email.");
+      return false;
+    }
+    if (!passwordRegex.test(password)) {
+      setError("Password must be 8+ chars with uppercase, lowercase, and number.");
       return false;
     }
     if (!isPkMobile(normPhone(phone))) {
@@ -155,7 +187,7 @@ const DoctorRegisterPage = () => {
       return false;
     }
     if (!cnicFront || !cnicBack || !selfie) {
-      setError("Upload CNIC front, back, and a selfie.");
+      setError("Upload CNIC front, back, and the additional document.");
       return false;
     }
     const okType = (f) => f && /^image\/(jpeg|jpg|png|webp)$/i.test(f.type);
@@ -190,10 +222,31 @@ const DoctorRegisterPage = () => {
       fd.append("selfie", selfie);
 
       const { data } = await api.post("/auth/doctor/register", fd);
+      if (data.otpRequired) {
+        setOtpStep(true);
+        return;
+      }
       login({ token: data.token, user: data.user });
       navigate(`/dashboard/${roleRouteSegment("Doctor")}`);
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const verifyOtpAndContinue = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      const { data } = await api.post("/auth/doctor/register/verify-otp", {
+        email: email.trim().toLowerCase(),
+        otp: otpCode,
+      });
+      login({ token: data.token, user: data.user });
+      navigate(`/dashboard/${roleRouteSegment("Doctor")}`);
+    } catch (err) {
+      setError(err.response?.data?.message || "OTP verification failed.");
     } finally {
       setSubmitting(false);
     }
@@ -298,7 +351,8 @@ const DoctorRegisterPage = () => {
                     className="doc-reg-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min. 6 characters"
+                    placeholder="Min 8, include upper/lower/number"
+                    minLength={8}
                     autoComplete="new-password"
                   />
                 </label>
@@ -328,7 +382,7 @@ const DoctorRegisterPage = () => {
                     value={province}
                     onChange={(e) => setProvince(e.target.value)}
                   >
-                    <option value="">Select province</option>
+                    <option value="">Select a province</option>
                     {provinces.map((p) => (
                       <option key={p.key} value={p.key}>
                         {p.label}
@@ -397,7 +451,7 @@ const DoctorRegisterPage = () => {
               <div className="doc-reg-upload-grid">
                 {uploadSlot(cnicFront, setCnicFront, "CNIC — front", "🪪")}
                 {uploadSlot(cnicBack, setCnicBack, "CNIC — back", "🪪")}
-                {uploadSlot(selfie, setSelfie, "Selfie (face)", "📷")}
+                {uploadSlot(selfie, setSelfie, "Document", "📄")}
               </div>
               <p className="doc-reg-hint">
                 JPEG, PNG, or WebP · max 5 MB each · well-lit, readable photos help faster review.
@@ -405,7 +459,7 @@ const DoctorRegisterPage = () => {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && !otpStep && (
             <dl className="doc-reg-review">
               <div className="doc-reg-review-item">
                 <dt>Name</dt>
@@ -422,7 +476,7 @@ const DoctorRegisterPage = () => {
               <div className="doc-reg-review-item">
                 <dt>Location</dt>
                 <dd>
-                  {province} · {city}
+                  {provinceLabel} · {city}
                 </dd>
               </div>
               <div className="doc-reg-review-item doc-reg-review-item--wide">
@@ -445,16 +499,42 @@ const DoctorRegisterPage = () => {
               </p>
             </dl>
           )}
+          {otpStep && (
+            <div className="doc-reg-fields">
+              <label className="doc-reg-field">
+                <span className="doc-reg-label">Enter OTP sent to your email</span>
+                <input
+                  className="doc-reg-input"
+                  inputMode="numeric"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="6-digit OTP"
+                />
+              </label>
+              <p className="doc-reg-hint">
+                After OTP verification, your profile moves to admin verification.
+              </p>
+            </div>
+          )}
 
           <div className="doc-reg-actions">
-            {step > 0 ? (
+            {(step > 0 || otpStep) ? (
               <button type="button" onClick={back} className="doc-reg-btn doc-reg-btn--ghost">
                 Back
               </button>
             ) : null}
-            {step < 3 ? (
+            {!otpStep && step < 3 ? (
               <button type="button" onClick={next} className="doc-reg-btn doc-reg-btn--primary">
                 Continue
+              </button>
+            ) : otpStep ? (
+              <button
+                type="button"
+                disabled={submitting || otpCode.length !== 6}
+                onClick={verifyOtpAndContinue}
+                className="doc-reg-btn doc-reg-btn--primary"
+              >
+                {submitting ? "Verifying…" : "Verify OTP & Continue"}
               </button>
             ) : (
               <button

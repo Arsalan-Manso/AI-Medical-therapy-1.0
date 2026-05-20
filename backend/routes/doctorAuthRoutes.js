@@ -1,5 +1,8 @@
 const express = require("express");
-const { registerDoctorWithVerification } = require("../controllers/doctorRegisterController");
+const {
+  registerDoctorWithVerification,
+  verifyDoctorSignupOtp,
+} = require("../controllers/doctorRegisterController");
 const {
   uploadDoctorDocs,
   handleMulterError,
@@ -13,5 +16,6 @@ router.post(
   handleMulterError,
   registerDoctorWithVerification
 );
+router.post("/register/verify-otp", verifyDoctorSignupOtp);
 
 module.exports = router;
