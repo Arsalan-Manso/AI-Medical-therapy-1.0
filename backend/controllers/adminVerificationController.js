@@ -37,7 +37,7 @@ const unlinkVerificationFiles = (doctorVerification) => {
 const listVerificationDoctors = async (req, res) => {
   try {
     const { q, status } = req.query;
-    const query = { type: "Doctor" };
+    const query = { type: "Doctor", isEmailVerified: true };
 
     if (status && ["pending", "approved", "rejected"].includes(String(status))) {
       query["doctorVerification.status"] = String(status);
@@ -152,6 +152,9 @@ const updateVerificationStatus = async (req, res) => {
     const user = await User.findById(id);
     if (!user || user.type !== "Doctor" || !user.doctorVerification) {
       return res.status(404).json({ message: "Doctor not found or not on verification program" });
+    }
+    if (!user.isEmailVerified) {
+      return res.status(400).json({ message: "Doctor email is not verified yet." });
     }
 
     if (user.doctorVerification.status !== "pending") {

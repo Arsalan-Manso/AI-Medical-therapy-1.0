@@ -4,6 +4,7 @@ import { useAuth } from "../context/useAuth";
 import { roleRouteSegment } from "../constants/roles";
 import { api, authHeader } from "../utils/api";
 import "../styles/DoctorDashboard.css";
+import doctorIcon from "../assets/doctor.png";
 
 const calcAge = (dob) => {
   if (!dob) return null;
@@ -15,6 +16,18 @@ const calcAge = (dob) => {
   if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a -= 1;
   return a;
 };
+
+const daySet = new Set([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+]);
+
+const timeSlotRegex = /^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$/;
 
 const DoctorDashboard = () => {
   const { user, logout, token, updateUser } = useAuth();
@@ -33,12 +46,23 @@ const DoctorDashboard = () => {
     province: "",
     city: "",
     address: "",
+    clinicAddress: "",
+    availabilityMode: "both",
+    fee30Min: "",
+    fee1Hour: "",
+    fee3Hour: "",
+    workingDaysInput: "",
+    timeSlotsInput: "",
   });
   const [practiceMsg, setPracticeMsg] = useState("");
   const [practiceSaving, setPracticeSaving] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [modal, setModal] = useState(null);
-  const [approveForm, setApproveForm] = useState({ scheduledAt: "", doctorMessage: "" });
+  const [approveForm, setApproveForm] = useState({
+    scheduledAt: "",
+    doctorMessage: "",
+    prescription: "",
+  });
   const [declineForm, setDeclineForm] = useState({ doctorMessage: "" });
   const [profilePicDraft, setProfilePicDraft] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
@@ -94,6 +118,13 @@ const DoctorDashboard = () => {
         province: dv.province || "",
         city: dv.city || "",
         address: dv.address || "",
+        clinicAddress: dp.clinicAddress || "",
+        availabilityMode: dp.availabilityMode || "both",
+        fee30Min: String(dp?.consultationFees?.fee30Min ?? ""),
+        fee1Hour: String(dp?.consultationFees?.fee1Hour ?? ""),
+        fee3Hour: String(dp?.consultationFees?.fee3Hour ?? ""),
+        workingDaysInput: Array.isArray(dp.workingDays) ? dp.workingDays.join(", ") : "",
+        timeSlotsInput: Array.isArray(dp.timeSlots) ? dp.timeSlots.join(", ") : "",
       });
       setProfilePicDraft(dp.profilePictureUrl || "");
       updateUser({
@@ -228,6 +259,37 @@ const DoctorDashboard = () => {
       setProfileErr("Please enter your full name.");
       return;
     }
+    if (["physical", "both"].includes(profileInfo.availabilityMode) && !profileInfo.clinicAddress.trim()) {
+      setProfileErr("Clinic address is required when physical availability is enabled.");
+      return;
+    }
+    const fee30 = Number(profileInfo.fee30Min || 0);
+    const fee60 = Number(profileInfo.fee1Hour || 0);
+    const fee180 = Number(profileInfo.fee3Hour || 0);
+    if (![fee30, fee60, fee180].every((n) => Number.isFinite(n) && n >= 0)) {
+      setProfileErr("Fees must be valid non-negative numbers.");
+      return;
+    }
+    if (fee30 === 0 && fee60 === 0 && fee180 === 0) {
+      setProfileErr("Please set at least one consultation fee.");
+      return;
+    }
+    const parsedWorkingDays = profileInfo.workingDaysInput
+      .split(",")
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean);
+    if (parsedWorkingDays.length && parsedWorkingDays.some((d) => !daySet.has(d))) {
+      setProfileErr("Working days must be valid weekday names (e.g. monday, tuesday).");
+      return;
+    }
+    const parsedTimeSlots = profileInfo.timeSlotsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parsedTimeSlots.length && parsedTimeSlots.some((slot) => !timeSlotRegex.test(slot))) {
+      setProfileErr("Time slots format must be HH:MM-HH:MM (e.g. 09:00-09:30).");
+      return;
+    }
     setProfileSaving(true);
     setProfileErr("");
     setProfileMsg("");
@@ -240,6 +302,15 @@ const DoctorDashboard = () => {
           province: profileInfo.province,
           city: profileInfo.city,
           address: profileInfo.address,
+          clinicAddress: profileInfo.clinicAddress,
+          availabilityMode: profileInfo.availabilityMode,
+          consultationFees: {
+            fee30Min: fee30,
+            fee1Hour: fee60,
+            fee3Hour: fee180,
+          },
+          workingDays: parsedWorkingDays,
+          timeSlots: parsedTimeSlots,
           specialties: selectedSpecialties,
           profilePictureUrl: profilePicDraft,
         },
@@ -248,12 +319,20 @@ const DoctorDashboard = () => {
       updateUser(data.user);
       const u = data.user;
       const dv = u.doctorVerification || {};
+      const dp = u.doctorProfile || {};
       setProfileInfo({
         name: u.name || "",
         phone: dv.phone || "",
         province: dv.province || "",
         city: dv.city || "",
         address: dv.address || "",
+        clinicAddress: dp.clinicAddress || "",
+        availabilityMode: dp.availabilityMode || "both",
+        fee30Min: String(dp?.consultationFees?.fee30Min ?? ""),
+        fee1Hour: String(dp?.consultationFees?.fee1Hour ?? ""),
+        fee3Hour: String(dp?.consultationFees?.fee3Hour ?? ""),
+        workingDaysInput: Array.isArray(dp.workingDays) ? dp.workingDays.join(", ") : "",
+        timeSlotsInput: Array.isArray(dp.timeSlots) ? dp.timeSlots.join(", ") : "",
       });
       setProfileMsg("Profile saved.");
     } catch (err) {
@@ -265,7 +344,7 @@ const DoctorDashboard = () => {
 
   const openModal = (type, id) => {
     setModal({ type, id });
-    setApproveForm({ scheduledAt: "", doctorMessage: "" });
+    setApproveForm({ scheduledAt: "", doctorMessage: "", prescription: "" });
     setDeclineForm({ doctorMessage: "" });
   };
 
@@ -279,6 +358,7 @@ const DoctorDashboard = () => {
           status: "approved",
           scheduledAt: approveForm.scheduledAt || undefined,
           doctorMessage: approveForm.doctorMessage || undefined,
+          prescription: approveForm.prescription || undefined,
         },
         authHeader(token)
       );
@@ -469,7 +549,7 @@ const DoctorDashboard = () => {
           {sidebarAvatar ? (
             <img src={sidebarAvatar} alt="" className="doctor-sidebar-avatar-img" />
           ) : (
-            <span className="doctor-sidebar-icon">🩺</span>
+            <img src={doctorIcon} alt="Doctor icon" className="doctor-sidebar-avatar-img" />
           )}
           <div>
             <h2>{user.name}</h2>
@@ -605,7 +685,7 @@ const DoctorDashboard = () => {
                         value={profileInfo.province}
                         onChange={(e) => setProfileInfo((p) => ({ ...p, province: e.target.value, city: "" }))}
                       >
-                        <option value="">Select province…</option>
+                        <option value="">Select a province</option>
                         {provinces.map((p) => (
                           <option key={p.key} value={p.key}>
                             {p.label}
@@ -637,6 +717,72 @@ const DoctorDashboard = () => {
                         placeholder="Clinic or practice address"
                       />
                     </label>
+                    <label className="doctor-field doctor-field-full">
+                      <span>Physical clinic address</span>
+                      <textarea
+                        rows={2}
+                        value={profileInfo.clinicAddress}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, clinicAddress: e.target.value }))}
+                        placeholder="Street / building / clinic details for physical visits"
+                      />
+                    </label>
+                    <label className="doctor-field">
+                      <span>Online / Physical availability</span>
+                      <select
+                        value={profileInfo.availabilityMode}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, availabilityMode: e.target.value }))}
+                      >
+                        <option value="both">Online + Physical</option>
+                        <option value="online">Online only</option>
+                        <option value="physical">Physical only</option>
+                      </select>
+                    </label>
+                    <label className="doctor-field">
+                      <span>30 min fee (PKR)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={profileInfo.fee30Min}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, fee30Min: e.target.value }))}
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="doctor-field">
+                      <span>1 hour fee (PKR)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={profileInfo.fee1Hour}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, fee1Hour: e.target.value }))}
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="doctor-field">
+                      <span>3 hours fee (PKR)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={profileInfo.fee3Hour}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, fee3Hour: e.target.value }))}
+                        placeholder="0"
+                      />
+                    </label>
+                    <label className="doctor-field doctor-field-full">
+                      <span>Working days</span>
+                      <input
+                        value={profileInfo.workingDaysInput}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, workingDaysInput: e.target.value }))}
+                        placeholder="monday, tuesday, wednesday"
+                      />
+                    </label>
+                    <label className="doctor-field doctor-field-full">
+                      <span>Time slots</span>
+                      <input
+                        value={profileInfo.timeSlotsInput}
+                        onChange={(e) => setProfileInfo((p) => ({ ...p, timeSlotsInput: e.target.value }))}
+                        placeholder="09:00-09:30, 10:00-10:30"
+                      />
+                    </label>
                   </div>
                   {renderSpecialtyPicker("Specialties (select all that apply)")}
                   {profileErr && <p className="doctor-alert doctor-alert-error">{profileErr}</p>}
@@ -657,7 +803,7 @@ const DoctorDashboard = () => {
               ) : null}
               {!pending.length && !loading ? (
                 <div className="doctor-empty genz-empty">
-                  <span>✨</span>
+                
                   <p>All caught up — no pending bookings.</p>
                 </div>
               ) : (
@@ -713,7 +859,7 @@ const DoctorDashboard = () => {
               <h2 className="doctor-section-title">Approved visits</h2>
               {!approved.length ? (
                 <div className="doctor-empty genz-empty">
-                  <span>📅</span>
+              
                   <p>No approved slots yet.</p>
                 </div>
               ) : (
@@ -730,6 +876,11 @@ const DoctorDashboard = () => {
                         <p className="doc-scheduled doc-scheduled-missing">Time TBD — message the patient if needed.</p>
                       )}
                       {r.doctorMessage ? <p className="doc-notes">{r.doctorMessage}</p> : null}
+                      {r.prescription ? (
+                        <p className="doc-notes">
+                          <strong>Prescription:</strong> {r.prescription}
+                        </p>
+                      ) : null}
                       <button
                         type="button"
                         className="doc-toggle-profile"
@@ -811,6 +962,17 @@ const DoctorDashboard = () => {
                           setApproveForm((f) => ({ ...f, doctorMessage: e.target.value }))
                         }
                         placeholder="e.g. Bring ID + insurance card"
+                      />
+                    </label>
+                    <label className="doctor-field">
+                      <span>Prescription (optional)</span>
+                      <textarea
+                        rows={4}
+                        value={approveForm.prescription}
+                        onChange={(e) =>
+                          setApproveForm((f) => ({ ...f, prescription: e.target.value }))
+                        }
+                        placeholder="Medicines, dosage, and usage instructions"
                       />
                     </label>
                     <div className="doc-modal-actions-row">

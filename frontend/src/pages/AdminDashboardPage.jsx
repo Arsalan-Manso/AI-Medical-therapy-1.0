@@ -1,8 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  MenuItem,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useAuth } from "../context/useAuth";
 import { api, authHeader } from "../utils/api";
 import { roleRouteSegment } from "../constants/roles";
+import "../styles/AdminDashboardPage.css";
 
 const AdminDashboardPage = () => {
   const { user, token, logout } = useAuth();
@@ -199,6 +223,12 @@ const AdminDashboardPage = () => {
 
   const totalInView = doctors.length;
 
+  const headerTitle = section === "inbox" ? "Contact inbox" : "Doctor verification";
+  const headerSubtitle =
+    section === "inbox"
+      ? "Read and manage messages sent from the landing page. Mark items as read as you review them."
+      : "Review Pakistan CNIC verification uploads, approve or reject applications, and remove accounts when needed.";
+
   const openContact = async (row) => {
     setSelectedContact(row);
     if (!row.read && token) {
@@ -212,164 +242,124 @@ const AdminDashboardPage = () => {
     }
   };
 
-  return (
-    <div className="tw:min-h-screen tw:bg-slate-100 tw:text-slate-900">
-      <header className="tw:sticky tw:top-0 tw:z-20 tw:border-b tw:border-slate-300 tw:bg-slate-200/90 tw:backdrop-blur-md">
-        <div className="tw:max-w-7xl tw:mx-auto tw:px-4 sm:tw:px-6 tw:py-3">
-          <div className="tw:rounded-2xl tw:border-2 tw:border-slate-800/80 tw:bg-slate-950 tw:shadow-[0_12px_40px_-12px_rgba(15,23,42,0.45)] tw:ring-1 tw:ring-slate-700 tw:overflow-hidden">
-            <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-4 tw:px-4 sm:tw:px-5 tw:py-4">
-              <div className="tw:flex tw:items-stretch tw:gap-3 tw:min-w-0">
-                <div className="tw:flex tw:w-12 tw:shrink-0 tw:flex-col tw:items-center tw:justify-center tw:rounded-xl tw:bg-gradient-to-b tw:from-teal-500/25 tw:to-teal-600/10 tw:border tw:border-teal-500/35 tw:text-xl tw:shadow-inner">
-                  ⚙️
-                </div>
-                <div className="tw:min-w-0 tw:flex tw:flex-col tw:justify-center tw:border-l tw:border-slate-700/80 tw:pl-3">
-                  <div className="tw:flex tw:flex-wrap tw:items-baseline tw:gap-x-2 tw:gap-y-0">
-                    <span className="tw:text-[10px] tw:font-bold tw:text-teal-400/90 tw:uppercase tw:tracking-[0.2em]">
-                      Admin
-                    </span>
-                    <span className="tw:text-slate-600 tw:text-xs tw:hidden sm:tw:inline">|</span>
-                    <span className="tw:text-xs tw:text-slate-500">Operations console</span>
-                  </div>
-                  <h1 className="tw:text-base sm:tw:text-lg tw:font-bold tw:text-white tw:truncate tw:mt-0.5">
-                    {section === "inbox" ? "Contact inbox" : "Doctor verification"}
-                  </h1>
-                  <div className="tw:mt-1 tw:flex tw:flex-wrap tw:items-center tw:gap-x-2 tw:text-[11px] tw:text-slate-400">
-                    <span className="tw:truncate tw:max-w-[200px] sm:tw:max-w-none tw:font-medium tw:text-slate-300">
-                      {user?.name}
-                    </span>
-                    <span className="tw:text-slate-600">·</span>
-                    <span className="tw:truncate tw:max-w-[220px] sm:tw:max-w-md tw:text-teal-400/85">
-                      {user?.email}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:shrink-0">
-                <Link
-                  to="/"
-                  className="tw:inline-flex tw:items-center tw:justify-center tw:rounded-lg tw:px-3.5 tw:py-2 tw:text-sm tw:font-semibold tw:text-slate-950 tw:bg-teal-400 hover:tw:bg-teal-300 tw:transition-colors tw:shadow-sm"
-                >
-                  Home
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="tw:inline-flex tw:items-center tw:justify-center tw:rounded-lg tw:px-3.5 tw:py-2 tw:text-sm tw:font-semibold tw:bg-slate-800 tw:text-slate-100 tw:border tw:border-slate-600 hover:tw:bg-slate-700 tw:transition-colors"
-                >
-                  Log out
-                </button>
-              </div>
-            </div>
+  const verificationRows = useMemo(() => doctors.map((d) => ({ ...d, id: d.id })), [doctors]);
 
-            <nav
-              className="tw:flex tw:flex-wrap tw:gap-1.5 tw:px-3 tw:py-2.5 tw:bg-slate-900 tw:border-t tw:border-slate-800"
-              aria-label="Admin sections"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setSection("verification");
-                  setSelectedContact(null);
-                }}
-                className={`tw:rounded-lg tw:px-3.5 tw:py-2 tw:text-sm tw:font-semibold tw:transition-all ${
-                  section === "verification"
-                    ? "tw:bg-teal-500/25 tw:text-teal-200 tw:ring-1 tw:ring-teal-400/50 tw:shadow-sm"
-                    : "tw:text-slate-400 hover:tw:text-white hover:tw:bg-slate-800"
-                }`}
-              >
-                Doctor verification
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSection("inbox");
-                  setSelected(null);
-                }}
-                className={`tw:inline-flex tw:items-center tw:gap-2 tw:rounded-lg tw:px-3.5 tw:py-2 tw:text-sm tw:font-semibold tw:transition-all ${
-                  section === "inbox"
-                    ? "tw:bg-teal-500/25 tw:text-teal-200 tw:ring-1 tw:ring-teal-400/50 tw:shadow-sm"
-                    : "tw:text-slate-400 hover:tw:text-white hover:tw:bg-slate-800"
-                }`}
-              >
-                Contact inbox
-                {inboxUnread > 0 ? (
-                  <span className="tw:min-w-[1.25rem] tw:rounded-md tw:bg-rose-500 tw:px-1.5 tw:py-0.5 tw:text-center tw:text-[10px] tw:font-bold tw:text-white">
-                    {inboxUnread > 99 ? "99+" : inboxUnread}
-                  </span>
-                ) : null}
-              </button>
-            </nav>
+  return (
+    <div className="admin-dashboard admin-shell tw:w-full tw:text-slate-900">
+      <aside className="admin-sidebar" aria-label="Admin navigation">
+        <div className="admin-sidebar-brand">
+          <span className="admin-sidebar-icon" aria-hidden>
+            ⚙️
+          </span>
+          <div>
+            <h2>AI Medical Therapy</h2>
+            <p>Admin console</p>
           </div>
         </div>
-      </header>
 
-      <main className="tw:max-w-7xl tw:mx-auto tw:px-4 sm:tw:px-6 tw:py-6">
+        <div className="admin-sidebar-user">
+          <p className="admin-sidebar-user-name">{user?.name || "Administrator"}</p>
+          <p className="admin-sidebar-user-email">{user?.email || "—"}</p>
+          <span className="admin-sidebar-role">Administrator</span>
+        </div>
+
+        <nav className="admin-nav" aria-label="Sections">
+          <button
+            type="button"
+            className={section === "verification" ? "active" : ""}
+            onClick={() => {
+              setSection("verification");
+              setSelectedContact(null);
+            }}
+          >
+            Doctor verification
+          </button>
+          <button
+            type="button"
+            className={section === "inbox" ? "active" : ""}
+            onClick={() => {
+              setSection("inbox");
+              setSelected(null);
+            }}
+          >
+            <span>Contact inbox</span>
+            {inboxUnread > 0 ? (
+              <span className="admin-nav-badge">{inboxUnread > 99 ? "99+" : inboxUnread}</span>
+            ) : null}
+          </button>
+        </nav>
+
+        <button type="button" className="admin-logout" onClick={handleLogout}>
+          Log out
+        </button>
+      </aside>
+
+      <div className="admin-dashboard-body">
+        <main className="admin-main">
+          <div className="admin-content-wrap">
+          <header className="admin-header">
+            <div>
+              <h1>{headerTitle}</h1>
+              <p>{headerSubtitle}</p>
+              {section === "verification" ? (
+                <div className="admin-header-meta">
+                  <span>
+                    Pending <strong>{pendingCount}</strong>
+                  </span>
+                  <span>
+                    Approved <strong className="tw:text-emerald-700">{approvedCount}</strong>
+                  </span>
+                  <span>
+                    Rejected <strong className="tw:text-rose-700">{rejectedCount}</strong>
+                  </span>
+                  <span>
+                    In view <strong>{totalInView}</strong>
+                  </span>
+                </div>
+              ) : (
+                <div className="admin-header-meta">
+                  <span>
+                    Unread{" "}
+                    <strong className={inboxUnread > 0 ? "tw:text-rose-600" : ""}>{inboxUnread}</strong>
+                  </span>
+                  <span>
+                    Total messages <strong>{inbox.length}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+            <Link to="/" className="admin-back-link">
+              ← Home
+            </Link>
+          </header>
         {section === "verification" ? (
           <>
-            <div className="tw:mb-5 tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:px-4 tw:py-3 tw:shadow-sm">
-              <p className="tw:text-sm tw:text-slate-600 tw:leading-relaxed">
-                <span className="tw:font-semibold tw:text-slate-800">Doctor verification.</span> Open a row to
-                view CNIC documents, then approve or reject pending applications.{" "}
-                <span className="tw:text-slate-500">
-                  Removing a doctor permanently deletes their login account and any uploaded verification files.
-                </span>
-              </p>
-            </div>
-
-            <div className="tw:flex tw:flex-wrap tw:gap-3 tw:mb-6">
-              <div className="tw:flex tw:min-w-[140px] tw:flex-1 tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:px-4 tw:py-3 tw:shadow-sm">
-                <span className="tw:text-xs tw:font-semibold tw:text-slate-500 tw:uppercase tw:tracking-wide">
-                  Pending
-                </span>
-                <span className="tw:text-2xl tw:font-bold tw:text-slate-900 tw:tabular-nums">{pendingCount}</span>
-              </div>
-              <div className="tw:flex tw:min-w-[140px] tw:flex-1 tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:px-4 tw:py-3 tw:shadow-sm">
-                <span className="tw:text-xs tw:font-semibold tw:text-slate-500 tw:uppercase tw:tracking-wide">
-                  Approved
-                </span>
-                <span className="tw:text-2xl tw:font-bold tw:text-emerald-700 tw:tabular-nums">{approvedCount}</span>
-              </div>
-              <div className="tw:flex tw:min-w-[140px] tw:flex-1 tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:px-4 tw:py-3 tw:shadow-sm">
-                <span className="tw:text-xs tw:font-semibold tw:text-slate-500 tw:uppercase tw:tracking-wide">
-                  Rejected
-                </span>
-                <span className="tw:text-2xl tw:font-bold tw:text-rose-700 tw:tabular-nums">{rejectedCount}</span>
-              </div>
-              <div className="tw:flex tw:min-w-[140px] tw:flex-1 tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:px-4 tw:py-3 tw:shadow-sm">
-                <span className="tw:text-xs tw:font-semibold tw:text-slate-500 tw:uppercase tw:tracking-wide">
-                  In list
-                </span>
-                <span className="tw:text-2xl tw:font-bold tw:text-slate-900 tw:tabular-nums">{totalInView}</span>
-              </div>
-            </div>
-
-            <div className="tw:mb-4 tw:flex tw:flex-col sm:tw:flex-row tw:gap-3">
-              <input
-                type="search"
+            <div className="admin-filters tw:mb-6 tw:flex tw:flex-col sm:tw:flex-row tw:gap-3">
+              <TextField
+                fullWidth
+                size="small"
                 placeholder="Search name, email, or CNIC…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="tw:flex-1 tw:rounded-xl tw:border tw:border-slate-200 tw:px-4 tw:py-2.5 tw:text-sm tw:font-medium tw:bg-white focus:tw:ring-2 focus:tw:ring-teal-500/30 focus:tw:border-teal-500 tw:outline-none tw:shadow-sm"
               />
-              <div className="tw:flex tw:flex-wrap tw:gap-2">
-                <select
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+                <TextField
+                  select
+                  size="small"
+                  label="Status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="tw:rounded-xl tw:border tw:border-slate-200 tw:px-4 tw:py-2.5 tw:text-sm tw:font-semibold tw:bg-white tw:min-w-[160px] tw:shadow-sm"
+                  sx={{ minWidth: 190 }}
                 >
-                  <option value="">All statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={load}
-                  className="tw:rounded-xl tw:bg-teal-600 hover:tw:bg-teal-500 tw:text-white tw:px-5 tw:py-2.5 tw:text-sm tw:font-semibold tw:shadow-sm tw:transition-colors"
-                >
+                  <MenuItem value="">All statuses</MenuItem>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="approved">Approved</MenuItem>
+                  <MenuItem value="rejected">Rejected</MenuItem>
+                </TextField>
+                <Button variant="contained" onClick={load} sx={{ px: 2.5 }}>
                   Refresh
-                </button>
-              </div>
+                </Button>
+              </Stack>
             </div>
 
             {error && (
@@ -378,237 +368,262 @@ const AdminDashboardPage = () => {
               </div>
             )}
 
-            <div className="tw:grid tw:lg:grid-cols-3 tw:gap-6">
-          <div className="tw:lg:col-span-2 tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:overflow-hidden">
-            <div className="tw:border-b tw:border-slate-200 tw:px-4 tw:py-3 tw:bg-slate-50">
-              <h2 className="tw:text-sm tw:font-semibold tw:text-slate-900">Doctor review queue</h2>
-              <p className="tw:text-xs tw:text-slate-500 tw:mt-0.5">
-                Pakistan CNIC verification · click a row for documents and actions
-              </p>
-            </div>
-            <div className="tw:overflow-x-auto">
-              <table className="tw:w-full tw:text-left tw:text-sm tw:border-collapse">
-                <thead className="tw:bg-slate-100/80 tw:text-[11px] tw:uppercase tw:tracking-wide tw:text-slate-600 tw:font-semibold">
-                  <tr>
-                    <th className="tw:px-4 tw:py-2.5 tw:border-b tw:border-slate-200">Doctor</th>
-                    <th className="tw:px-4 tw:py-2.5 tw:border-b tw:border-slate-200">CNIC</th>
-                    <th className="tw:px-4 tw:py-2.5 tw:border-b tw:border-slate-200">Status</th>
-                    <th className="tw:px-4 tw:py-2.5 tw:border-b tw:border-slate-200 tw:w-20" aria-label="Open" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !doctors.length ? (
-                    <tr>
-                      <td colSpan={4} className="tw:px-4 tw:py-8 tw:text-center tw:text-slate-500">
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : null}
-                  {!loading && doctors.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="tw:px-4 tw:py-8 tw:text-center tw:text-slate-500">
-                        No rows match.
-                      </td>
-                    </tr>
-                  ) : null}
-                  {doctors.map((d) => (
-                    <tr
-                      key={d.id}
-                      className={`tw:border-t tw:border-slate-100 hover:tw:bg-teal-50/50 tw:cursor-pointer ${
-                        selected?.id === d.id ? "tw:bg-teal-50/80" : ""
-                      }`}
-                      onClick={() => openRow(d)}
-                    >
-                      <td className="tw:px-4 tw:py-3">
-                        <div className="tw:font-bold tw:text-slate-900">{d.name}</div>
-                        <div className="tw:text-xs tw:text-slate-500">{d.email}</div>
-                        {d.legacy && (
-                          <span className="tw:inline-block tw:mt-1 tw:text-[10px] tw:font-bold tw:uppercase tw:bg-amber-100 tw:text-amber-800 tw:px-2 tw:py-0.5 tw:rounded-full">
-                            Legacy
-                          </span>
-                        )}
-                      </td>
-                      <td className="tw:px-4 tw:py-3 tw:font-mono tw:text-xs">
-                        {d.cnicFormatted || "—"}
-                      </td>
-                      <td className="tw:px-4 tw:py-3">
-                        <span
-                          className={`tw:text-xs tw:font-bold tw:px-2 tw:py-1 tw:rounded-lg ${
-                            d.status === "approved"
-                              ? "tw:bg-emerald-100 tw:text-emerald-800"
-                              : d.status === "pending"
-                                ? "tw:bg-amber-100 tw:text-amber-800"
-                                : d.status === "rejected"
-                                  ? "tw:bg-rose-100 tw:text-rose-800"
-                                  : "tw:bg-slate-100 tw:text-slate-600"
-                          }`}
-                        >
-                          {d.status}
-                        </span>
-                      </td>
-                      <td className="tw:px-4 tw:py-3 tw:text-right">
-                        <span className="tw:text-teal-700 tw:font-bold tw:text-xs">Open →</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid rgba(148,163,184,0.3)",
+                overflow: "hidden",
+                boxShadow: "0 18px 36px -26px rgba(15,23,42,0.35)",
+              }}
+            >
+              <Box sx={{ px: 2.5, py: 2, borderBottom: "1px solid rgba(148,163,184,0.2)", bgcolor: "#f8fafc" }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a" }}>
+                  Doctor review queue
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Pakistan CNIC verification · click Open to view details and actions
+                </Typography>
+              </Box>
 
-          <div className="tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:overflow-hidden tw:min-h-[320px] tw:flex tw:flex-col">
-            <div className="tw:px-4 tw:py-3 tw:border-b tw:border-slate-200 tw:bg-slate-50">
-              <h2 className="tw:text-xs tw:font-bold tw:text-slate-600 tw:uppercase tw:tracking-wider">
-                Detail panel
-              </h2>
-              <p className="tw:text-[11px] tw:text-slate-500 tw:mt-0.5">Selected doctor · documents & actions</p>
-            </div>
-            <div className="tw:p-4 tw:flex-1 tw:flex tw:flex-col">
-            {!selected ? (
-              <p className="tw:text-slate-400 tw:text-sm tw:font-medium tw:text-center tw:mt-10 tw:px-2">
-                Select a doctor from the table to review documents and verify.
-              </p>
-            ) : (
-              <div className="tw:space-y-4 tw:flex-1 tw:flex tw:flex-col">
-                <div className="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50/80 tw:p-3">
-                  <div className="tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-2">
-                    <div>
-                      <h3 className="tw:text-base tw:font-bold tw:text-slate-900">{selected.name}</h3>
-                      <p className="tw:text-xs tw:text-slate-500 tw:mt-0.5">{selected.email}</p>
-                    </div>
-                    <span
-                      className={`tw:shrink-0 tw:text-[10px] tw:font-bold tw:uppercase tw:px-2 tw:py-1 tw:rounded-md ${
-                        selected.status === "approved"
-                          ? "tw:bg-emerald-100 tw:text-emerald-800"
-                          : selected.status === "pending"
-                            ? "tw:bg-amber-100 tw:text-amber-800"
-                            : selected.status === "rejected"
-                              ? "tw:bg-rose-100 tw:text-rose-800"
-                              : "tw:bg-slate-200 tw:text-slate-700"
-                      }`}
-                    >
-                      {selected.status}
-                    </span>
-                  </div>
-                  {selected.cnicFormatted ? (
-                    <p className="tw:mt-2 tw:font-mono tw:text-xs tw:text-slate-600">
-                      CNIC {selected.cnicFormatted}
-                    </p>
-                  ) : null}
-                </div>
-                {selected.legacy ? (
-                  <p className="tw:text-xs tw:text-amber-900 tw:bg-amber-50 tw:border tw:border-amber-200/80 tw:rounded-lg tw:p-3 tw:leading-relaxed">
-                    <span className="tw:font-semibold">Legacy account.</span> This doctor was created before the
-                    CNIC verification workflow. No verification documents are stored.
-                  </p>
-                ) : (
-                  <dl className="tw:text-sm tw:space-y-2 tw:text-slate-600 tw:rounded-lg tw:border tw:border-slate-100 tw:p-3">
-                    <div>
-                      <dt className="tw:text-xs tw:font-bold tw:text-slate-400 tw:uppercase">Phone</dt>
-                      <dd>{selected.phone}</dd>
-                    </div>
-                    <div>
-                      <dt className="tw:text-xs tw:font-bold tw:text-slate-400 tw:uppercase">City</dt>
-                      <dd>
-                        {selected.city}, {selected.provinceLabel}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="tw:text-xs tw:font-bold tw:text-slate-400 tw:uppercase">Address</dt>
-                      <dd>{selected.address}</dd>
-                    </div>
-                  </dl>
-                )}
-
-                {!selected.legacy && selected.hasDocuments && (
-                  <div className="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3">
-                    <p className="tw:text-xs tw:font-bold tw:text-slate-500 tw:uppercase tw:mb-2 tw:tracking-wide">
-                      Verification documents
-                    </p>
-                    <div className="tw:flex tw:flex-wrap tw:gap-2">
-                      {["cnicFront", "cnicBack", "selfie"].map((kind) => (
-                        <button
-                          key={kind}
-                          type="button"
-                          onClick={() => fetchDoc(selected.id, kind)}
-                          disabled={!!docLoading}
-                          className="tw:rounded-xl tw:bg-slate-100 tw:px-3 tw:py-2 tw:text-xs tw:font-bold tw:text-slate-700 hover:tw:bg-slate-200 disabled:tw:opacity-50"
-                        >
-                          {docLoading === kind ? "…" : kind === "cnicFront" ? "CNIC front" : kind === "cnicBack" ? "CNIC back" : "Selfie"}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="tw:mt-4 tw:grid tw:gap-3">
-                      {docUrls.cnicFront && (
-                        <img src={docUrls.cnicFront} alt="CNIC front" className="tw:rounded-xl tw:border tw:max-h-48 tw:object-contain tw:w-full tw:bg-slate-50" />
+              <Box sx={{ p: 2 }}>
+                <TableContainer
+                  sx={{
+                    border: "1px solid rgba(148,163,184,0.26)",
+                    borderRadius: 2,
+                  }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "#f8fafc" }}>
+                        <TableCell sx={{ fontWeight: 800, color: "#334155" }}>Doctor</TableCell>
+                        <TableCell sx={{ fontWeight: 800, color: "#334155" }}>CNIC</TableCell>
+                        <TableCell sx={{ fontWeight: 800, color: "#334155" }}>Status</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 800, color: "#334155" }}>
+                          Open
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                            Loading...
+                          </TableCell>
+                        </TableRow>
+                      ) : verificationRows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 8, color: "text.secondary" }}>
+                            No rows match.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        verificationRows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            hover
+                            sx={{ cursor: "pointer" }}
+                            onClick={() => openRow(row)}
+                          >
+                            <TableCell>
+                              <Stack direction="row" spacing={1.25} sx={{ minWidth: 0, alignItems: "center" }}>
+                                <Avatar sx={{ width: 34, height: 34, bgcolor: "#ccfbf1", color: "#0f766e", fontWeight: 700 }}>
+                                  {String(row.name || "?").trim().slice(0, 1).toUpperCase()}
+                                </Avatar>
+                                <Box sx={{ minWidth: 0 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+                                    {row.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" noWrap>
+                                    {row.email}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                                {row.cnicFormatted || "—"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={String(row.status || "unknown")}
+                                color={
+                                  row.status === "approved"
+                                    ? "success"
+                                    : row.status === "pending"
+                                      ? "warning"
+                                      : row.status === "rejected"
+                                        ? "error"
+                                        : "default"
+                                }
+                                variant={row.status === "pending" ? "filled" : "outlined"}
+                                sx={{ textTransform: "capitalize", fontWeight: 700 }}
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Button size="small" variant="outlined" onClick={() => openRow(row)}>
+                                Open
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
-                      {docUrls.cnicBack && (
-                        <img src={docUrls.cnicBack} alt="CNIC back" className="tw:rounded-xl tw:border tw:max-h-48 tw:object-contain tw:w-full tw:bg-slate-50" />
-                      )}
-                      {docUrls.selfie && (
-                        <img src={docUrls.selfie} alt="Selfie" className="tw:rounded-xl tw:border tw:max-h-48 tw:object-contain tw:w-full tw:bg-slate-50" />
-                      )}
-                    </div>
-                  </div>
-                )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Paper>
 
-                {!selected.legacy && selected.status === "pending" && (
-                  <div className="tw:flex tw:flex-col tw:sm:flex-row tw:gap-2 tw:pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setActionModal({ type: "approved", id: selected.id })}
-                      className="tw:flex-1 tw:rounded-xl tw:bg-emerald-600 tw:text-white tw:py-2.5 tw:text-sm tw:font-bold hover:tw:bg-emerald-500 tw:transition-colors"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActionModal({ type: "rejected", id: selected.id })}
-                      className="tw:flex-1 tw:rounded-xl tw:border-2 tw:border-rose-300 tw:bg-white tw:text-rose-700 tw:py-2.5 tw:text-sm tw:font-bold hover:tw:bg-rose-50 tw:transition-colors"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
+            <Dialog
+              open={!!selected && !actionModal && !deleteTarget}
+              onClose={() => setSelected(null)}
+              fullWidth
+              maxWidth="md"
+              PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+              <DialogTitle sx={{ pb: 1.25 }}>
+                <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+                  <Avatar sx={{ bgcolor: "#ccfbf1", color: "#0f766e", fontWeight: 700 }}>
+                    {String(selected?.name || "?").trim().slice(0, 1).toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
+                      {selected?.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      {selected?.email}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </DialogTitle>
+              <DialogContent dividers>
+                {selected ? (
+                  <Stack spacing={2}>
+                    <Stack direction="row" spacing={1.25} flexWrap="wrap">
+                      <Chip
+                        label={selected.status}
+                        color={
+                          selected.status === "approved"
+                            ? "success"
+                            : selected.status === "pending"
+                              ? "warning"
+                              : selected.status === "rejected"
+                                ? "error"
+                                : "default"
+                        }
+                        sx={{ textTransform: "capitalize", fontWeight: 700 }}
+                      />
+                      {selected.cnicFormatted ? <Chip variant="outlined" label={`CNIC ${selected.cnicFormatted}`} /> : null}
+                    </Stack>
 
-                {selected.status === "rejected" && selected.rejectionReason ? (
-                  <p className="tw:text-xs tw:text-rose-600 tw:font-medium tw:rounded-lg tw:bg-rose-50 tw:border tw:border-rose-100 tw:p-2">
-                    Reason: {selected.rejectionReason}
-                  </p>
+                    {selected.legacy ? (
+                      <Alert severity="warning">
+                        This is a legacy doctor account created before CNIC verification workflow.
+                      </Alert>
+                    ) : (
+                      <Stack spacing={1}>
+                        <Typography variant="body2">
+                          <strong>Phone:</strong> {selected.phone || "—"}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>City:</strong> {selected.city || "—"}, {selected.provinceLabel || "—"}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Address:</strong> {selected.address || "—"}
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    {!selected.legacy && selected.hasDocuments ? (
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary", textTransform: "uppercase" }}>
+                          Verification documents
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          {["cnicFront", "cnicBack", "selfie"].map((kind) => (
+                            <Button
+                              key={kind}
+                              variant="outlined"
+                              size="small"
+                              onClick={() => fetchDoc(selected.id, kind)}
+                              disabled={!!docLoading}
+                            >
+                              {docLoading === kind ? "Loading..." : kind === "cnicFront" ? "CNIC front" : kind === "cnicBack" ? "CNIC back" : "Document"}
+                            </Button>
+                          ))}
+                        </Stack>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mt: 1.5 }}>
+                          {docUrls.cnicFront ? (
+                            <Box component="img" src={docUrls.cnicFront} alt="CNIC front" sx={{ width: "100%", maxHeight: 220, objectFit: "contain", border: "1px solid #e2e8f0", borderRadius: 2, bgcolor: "#f8fafc" }} />
+                          ) : null}
+                          {docUrls.cnicBack ? (
+                            <Box component="img" src={docUrls.cnicBack} alt="CNIC back" sx={{ width: "100%", maxHeight: 220, objectFit: "contain", border: "1px solid #e2e8f0", borderRadius: 2, bgcolor: "#f8fafc" }} />
+                          ) : null}
+                          {docUrls.selfie ? (
+                            <Box component="img" src={docUrls.selfie} alt="Uploaded document" sx={{ width: "100%", maxHeight: 220, objectFit: "contain", border: "1px solid #e2e8f0", borderRadius: 2, bgcolor: "#f8fafc" }} />
+                          ) : null}
+                        </Stack>
+                      </Box>
+                    ) : null}
+
+                    {!selected.legacy && selected.status === "pending" ? (
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+                        <Button variant="contained" color="success" onClick={() => setActionModal({ type: "approved", id: selected.id })}>
+                          Approve
+                        </Button>
+                        <Button variant="outlined" color="error" onClick={() => setActionModal({ type: "rejected", id: selected.id })}>
+                          Reject
+                        </Button>
+                      </Stack>
+                    ) : null}
+
+                    {selected.status === "rejected" && selected.rejectionReason ? (
+                      <Alert severity="error">Reason: {selected.rejectionReason}</Alert>
+                    ) : null}
+
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1.5}
+                      alignItems={{ sm: "center" }}
+                      justifyContent="space-between"
+                      sx={{
+                        pt: 2,
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        To revoke access, remove the account (you will confirm in the next step).
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        sx={{ flexShrink: 0 }}
+                        onClick={() =>
+                          setDeleteTarget({
+                            id: selected.id,
+                            name: selected.name,
+                            email: selected.email,
+                          })
+                        }
+                      >
+                        Remove doctor
+                      </Button>
+                    </Stack>
+                  </Stack>
                 ) : null}
-
-                <div className="tw:mt-auto tw:pt-4 tw:border-t tw:border-slate-200">
-                  <div className="tw:rounded-xl tw:border tw:border-rose-200 tw:bg-rose-50/60 tw:p-3">
-                    <p className="tw:text-[11px] tw:font-bold tw:text-rose-900 tw:uppercase tw:tracking-wide">
-                      Danger zone
-                    </p>
-                    <p className="tw:text-xs tw:text-rose-800/90 tw:mt-1 tw:leading-snug">
-                      Permanently delete this doctor&apos;s account and verification uploads. This cannot be undone.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteTarget({
-                          id: selected.id,
-                          name: selected.name,
-                          email: selected.email,
-                        })
-                      }
-                      className="tw:mt-3 tw:w-full tw:rounded-lg tw:border-2 tw:border-rose-400 tw:bg-white tw:px-3 tw:py-2 tw:text-sm tw:font-bold tw:text-rose-700 hover:tw:bg-rose-100 tw:transition-colors"
-                    >
-                      Remove doctor account
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
-          </div>
-        </div>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setSelected(null)}>Close</Button>
+              </DialogActions>
+            </Dialog>
           </>
         ) : (
-          <div className="tw:grid tw:lg:grid-cols-5 tw:gap-6">
-            <div className="tw:lg:col-span-2 tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:overflow-hidden">
+          <div className="tw:grid tw:grid-cols-1 xl:tw:grid-cols-5 tw:gap-6">
+            <div className="admin-panel-card xl:tw:col-span-2 tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:overflow-hidden">
               <div className="tw:border-b tw:border-slate-200 tw:px-4 tw:py-3 tw:flex tw:items-center tw:justify-between tw:bg-slate-50">
                 <h2 className="tw:text-sm tw:font-semibold tw:text-slate-800">Landing page messages</h2>
                 <button
@@ -662,7 +677,7 @@ const AdminDashboardPage = () => {
                 </ul>
               </div>
             </div>
-            <div className="tw:lg:col-span-3 tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:p-6 tw:min-h-[280px]">
+            <div className="admin-panel-card xl:tw:col-span-3 tw:bg-white tw:rounded-xl tw:border tw:border-slate-200 tw:shadow-sm tw:p-6 tw:min-h-[380px]">
               {!selectedContact ? (
                 <p className="tw:text-slate-500 tw:text-sm tw:text-center tw:pt-16">
                   Select a message to read the full text.
@@ -702,30 +717,47 @@ const AdminDashboardPage = () => {
             </div>
           </div>
         )}
-      </main>
+          </div>
+        </main>
+      </div>
 
       {deleteTarget && (
-        <div className="tw:fixed tw:inset-0 tw:bg-slate-900/60 tw:backdrop-blur-sm tw:z-[60] tw:flex tw:items-center tw:justify-center tw:p-4">
-          <div className="tw:bg-white tw:rounded-2xl tw:max-w-md tw:w-full tw:p-6 tw:shadow-2xl tw:border tw:border-slate-200">
-            <h3 className="tw:text-lg tw:font-bold tw:text-slate-900">Remove doctor account?</h3>
-            <p className="tw:text-sm tw:text-slate-600 tw:mt-2 tw:leading-relaxed">
+        <div
+          className="admin-confirm-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="admin-confirm-delete-title"
+        >
+          <div className="admin-confirm-dialog admin-confirm-dialog--delete">
+            <div className="admin-confirm-header">
+              <span className="admin-confirm-icon-wrap" aria-hidden>
+                !
+              </span>
+              <div className="admin-confirm-heading">
+                <p className="admin-confirm-kicker">Permanent action</p>
+                <h3 className="admin-confirm-title" id="admin-confirm-delete-title">
+                  Remove doctor account?
+                </h3>
+              </div>
+            </div>
+            <p className="admin-confirm-body">
               This will permanently delete{" "}
-              <span className="tw:font-semibold tw:text-slate-900">{deleteTarget.name}</span> (
-              {deleteTarget.email}) and all associated verification files.
+              <span className="admin-confirm-em">{deleteTarget.name}</span> (
+              {deleteTarget.email}) and all associated verification files. This cannot be undone.
             </p>
-            <div className="tw:flex tw:flex-col-reverse sm:tw:flex-row tw:gap-2 tw:mt-6">
+            <div className="admin-confirm-actions">
               <button
                 type="button"
+                className="admin-confirm-btn admin-confirm-btn--secondary"
                 onClick={() => setDeleteTarget(null)}
-                className="tw:flex-1 tw:rounded-xl tw:border-2 tw:border-slate-200 tw:py-3 tw:text-sm tw:font-semibold tw:text-slate-700 hover:tw:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                className="admin-confirm-btn admin-confirm-btn--delete"
                 disabled={deleteBusy}
                 onClick={confirmDeleteDoctor}
-                className="tw:flex-1 tw:rounded-xl tw:bg-rose-600 hover:tw:bg-rose-500 tw:text-white tw:py-3 tw:text-sm tw:font-bold disabled:tw:opacity-60"
               >
                 {deleteBusy ? "Removing…" : "Yes, delete account"}
               </button>
@@ -735,37 +767,68 @@ const AdminDashboardPage = () => {
       )}
 
       {actionModal && (
-        <div className="tw:fixed tw:inset-0 tw:bg-slate-900/50 tw:backdrop-blur-sm tw:z-50 tw:flex tw:items-center tw:justify-center tw:p-4">
-          <div className="tw:bg-white tw:rounded-3xl tw:max-w-md tw:w-full tw:p-6 tw:shadow-2xl">
-            <h3 className="tw:text-lg tw:font-black">
-              {actionModal.type === "approved" ? "Approve doctor?" : "Reject application?"}
-            </h3>
+        <div
+          className="admin-confirm-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="admin-confirm-action-title"
+        >
+          <div
+            className={`admin-confirm-dialog ${
+              actionModal.type === "approved"
+                ? "admin-confirm-dialog--approve"
+                : "admin-confirm-dialog--reject"
+            }`}
+          >
+            <div className="admin-confirm-header">
+              <span className="admin-confirm-icon-wrap" aria-hidden>
+                {actionModal.type === "approved" ? "✓" : "✕"}
+              </span>
+              <div className="admin-confirm-heading">
+                <p className="admin-confirm-kicker">
+                  {actionModal.type === "approved" ? "Verification" : "Application"}
+                </p>
+                <h3 className="admin-confirm-title" id="admin-confirm-action-title">
+                  {actionModal.type === "approved" ? "Approve this doctor?" : "Reject this application?"}
+                </h3>
+              </div>
+            </div>
+            {selected ? (
+              <p className="admin-confirm-body">
+                <span className="admin-confirm-em">{selected.name}</span> ({selected.email})
+                {actionModal.type === "approved"
+                  ? " will be marked as approved and can use the platform as a verified doctor."
+                  : " will be notified that their application was not approved. You may add an optional reason below."}
+              </p>
+            ) : null}
             {actionModal.type === "rejected" && (
               <textarea
-                className="tw:mt-4 tw:w-full tw:rounded-2xl tw:border tw:p-3 tw:text-sm"
+                className="admin-confirm-textarea"
                 rows={3}
-                placeholder="Reason (optional)"
+                placeholder="Reason (optional, shown to the doctor)"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
               />
             )}
-            <div className="tw:flex tw:gap-2 tw:mt-6">
+            <div className="admin-confirm-actions">
               <button
                 type="button"
+                className="admin-confirm-btn admin-confirm-btn--secondary"
                 onClick={() => setActionModal(null)}
-                className="tw:flex-1 tw:rounded-2xl tw:border-2 tw:py-3 tw:font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                className={`admin-confirm-btn ${
+                  actionModal.type === "approved"
+                    ? "admin-confirm-btn--approve"
+                    : "admin-confirm-btn--reject"
+                }`}
                 disabled={actionBusy}
                 onClick={submitAction}
-                className={`tw:flex-1 tw:rounded-2xl tw:py-3 tw:font-bold tw:text-white ${
-                  actionModal.type === "approved" ? "tw:bg-emerald-600" : "tw:bg-rose-600"
-                }`}
               >
-                {actionBusy ? "…" : "Confirm"}
+                {actionBusy ? "Please wait…" : actionModal.type === "approved" ? "Approve" : "Reject"}
               </button>
             </div>
           </div>

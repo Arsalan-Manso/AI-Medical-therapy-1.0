@@ -4,6 +4,7 @@ const PROVINCES = [
   { key: "sindh", label: "Sindh" },
   { key: "kpk", label: "Khyber Pakhtunkhwa (KP)" },
   { key: "balochistan", label: "Balochistan" },
+  { key: "islamabad", label: "Islamabad" },
   { key: "gilgit_baltistan", label: "Gilgit-Baltistan" },
   { key: "azad_kashmir", label: "Azad Kashmir" },
 ];
@@ -40,6 +41,7 @@ const CITIES_BY_PROVINCE = {
   ],
   kpk: ["Peshawar", "Mardan", "Abbottabad", "Swat", "Kohat", "Bannu", "Dera Ismail Khan"],
   balochistan: ["Quetta", "Gwadar", "Turbat", "Khuzdar", "Sibi", "Zhob"],
+  islamabad: ["Islamabad"],
   gilgit_baltistan: ["Gilgit", "Skardu", "Hunza", "Diamer"],
   azad_kashmir: ["Muzaffarabad", "Mirpur", "Kotli", "Rawalakot"],
 };

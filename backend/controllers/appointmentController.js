@@ -64,6 +64,16 @@ const listDoctorsForPatient = async (req, res) => {
       practiceProvince: d.doctorVerification?.province?.trim() || "",
       practicePhone: d.doctorVerification?.phone?.trim() || "",
       practiceAddress: d.doctorVerification?.address?.trim() || "",
+      profilePictureUrl: d.doctorProfile?.profilePictureUrl || "",
+      clinicAddress: d.doctorProfile?.clinicAddress || "",
+      availabilityMode: d.doctorProfile?.availabilityMode || "both",
+      consultationFees: {
+        fee30Min: Number(d.doctorProfile?.consultationFees?.fee30Min || 0),
+        fee1Hour: Number(d.doctorProfile?.consultationFees?.fee1Hour || 0),
+        fee3Hour: Number(d.doctorProfile?.consultationFees?.fee3Hour || 0),
+      },
+      workingDays: Array.isArray(d.doctorProfile?.workingDays) ? d.doctorProfile.workingDays : [],
+      timeSlots: Array.isArray(d.doctorProfile?.timeSlots) ? d.doctorProfile.timeSlots : [],
       memberSince: d.createdAt || null,
       rating: placeholderRating(d._id),
       reviewCount: 12 + ((String(d._id).length * 7) % 80),
@@ -163,6 +173,7 @@ const formatPatientAppointment = (doc) => {
     notes: doc.notes,
     scheduledAt: doc.scheduledAt,
     doctorMessage: doc.doctorMessage,
+    prescription: doc.prescription || "",
     createdAt: doc.createdAt,
     doctor: d
       ? {
@@ -243,6 +254,7 @@ const listDoctorRequests = async (req, res) => {
       notes: row.notes,
       scheduledAt: row.scheduledAt,
       doctorMessage: row.doctorMessage,
+      prescription: row.prescription || "",
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       patient: patientSnapshot(row.patient),
@@ -257,14 +269,10 @@ const listDoctorRequests = async (req, res) => {
 const updateDoctorRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, scheduledAt, doctorMessage } = req.body;
+    const { status, scheduledAt, doctorMessage, prescription } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid request" });
-    }
-
-    if (!["approved", "declined"].includes(status)) {
-      return res.status(400).json({ message: "Status must be approved or declined" });
     }
 
     const appt = await AppointmentRequest.findOne({
@@ -276,35 +284,61 @@ const updateDoctorRequest = async (req, res) => {
       return res.status(404).json({ message: "Request not found" });
     }
 
-    if (appt.status !== "pending") {
+    const isPrescriptionOnlyUpdate =
+      (status === undefined || status === null || status === "") &&
+      (prescription !== undefined || doctorMessage !== undefined) &&
+      appt.status === "approved";
+
+    if (!isPrescriptionOnlyUpdate && !["approved", "declined"].includes(status)) {
+      return res.status(400).json({ message: "Status must be approved or declined" });
+    }
+
+    if (!isPrescriptionOnlyUpdate && appt.status !== "pending") {
       return res.status(400).json({ message: "This request is no longer pending" });
     }
 
-    appt.status = status;
-    if (doctorMessage !== undefined && doctorMessage !== null) {
-      appt.doctorMessage = String(doctorMessage).slice(0, 1000);
-    }
-
-    if (status === "approved" && scheduledAt) {
-      const dt = new Date(scheduledAt);
-      if (Number.isNaN(dt.getTime())) {
-        return res.status(400).json({ message: "Invalid scheduled date/time" });
+    if (isPrescriptionOnlyUpdate) {
+      if (doctorMessage !== undefined && doctorMessage !== null) {
+        appt.doctorMessage = String(doctorMessage).slice(0, 1000);
       }
-      appt.scheduledAt = dt;
-    } else if (status === "declined") {
-      appt.scheduledAt = undefined;
+      if (prescription !== undefined && prescription !== null) {
+        appt.prescription = String(prescription).slice(0, 4000);
+      }
+    } else {
+      appt.status = status;
+      if (doctorMessage !== undefined && doctorMessage !== null) {
+        appt.doctorMessage = String(doctorMessage).slice(0, 1000);
+      }
+      if (prescription !== undefined && prescription !== null) {
+        appt.prescription = String(prescription).slice(0, 4000);
+      }
+
+      if (status === "approved" && scheduledAt) {
+        const dt = new Date(scheduledAt);
+        if (Number.isNaN(dt.getTime())) {
+          return res.status(400).json({ message: "Invalid scheduled date/time" });
+        }
+        appt.scheduledAt = dt;
+      } else if (status === "declined") {
+        appt.scheduledAt = undefined;
+      }
     }
 
     await appt.save();
     await appt.populate("patient", "name email patientProfile type");
 
     return res.status(200).json({
-      message: status === "approved" ? "Appointment approved" : "Request declined",
+      message: isPrescriptionOnlyUpdate
+        ? "Prescription updated"
+        : status === "approved"
+          ? "Appointment approved"
+          : "Request declined",
       request: {
         id: appt._id,
         status: appt.status,
         scheduledAt: appt.scheduledAt,
         doctorMessage: appt.doctorMessage,
+        prescription: appt.prescription || "",
         patient: patientSnapshot(appt.patient),
       },
     });

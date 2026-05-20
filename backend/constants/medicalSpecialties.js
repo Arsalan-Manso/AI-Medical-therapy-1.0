@@ -57,6 +57,15 @@ const buildDoctorProfilePublic = (doctorProfile) => {
     specialty: primary,
     specialtyLabel: primary ? labelForSlug(primary) : "",
     profilePictureUrl: doctorProfile?.profilePictureUrl || "",
+    clinicAddress: doctorProfile?.clinicAddress || "",
+    availabilityMode: doctorProfile?.availabilityMode || "both",
+    consultationFees: {
+      fee30Min: Number(doctorProfile?.consultationFees?.fee30Min || 0),
+      fee1Hour: Number(doctorProfile?.consultationFees?.fee1Hour || 0),
+      fee3Hour: Number(doctorProfile?.consultationFees?.fee3Hour || 0),
+    },
+    workingDays: Array.isArray(doctorProfile?.workingDays) ? doctorProfile.workingDays : [],
+    timeSlots: Array.isArray(doctorProfile?.timeSlots) ? doctorProfile.timeSlots : [],
   };
 };
 

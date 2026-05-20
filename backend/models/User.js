@@ -28,6 +28,19 @@ const doctorProfileSchema = new mongoose.Schema(
     specialty: { type: String, trim: true, default: "" },
     specialties: { type: [String], default: [] },
     profilePictureUrl: { type: String, default: "" },
+    clinicAddress: { type: String, trim: true, default: "" },
+    availabilityMode: {
+      type: String,
+      enum: ["online", "physical", "both"],
+      default: "both",
+    },
+    consultationFees: {
+      fee30Min: { type: Number, min: 0, default: 0 },
+      fee1Hour: { type: Number, min: 0, default: 0 },
+      fee3Hour: { type: Number, min: 0, default: 0 },
+    },
+    workingDays: { type: [String], default: [] },
+    timeSlots: { type: [String], default: [] },
   },
   { _id: false }
 );
@@ -69,9 +82,23 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      required: function requiredPassword() {
+        return !this.googleId;
+      },
+      minlength: 8,
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    otpCodeHash: { type: String, default: "" },
+    otpExpiresAt: { type: Date, default: null },
+    otpPurpose: { type: String, enum: ["signup", "login", "reset_password", ""], default: "" },
+    otpAttempts: { type: Number, default: 0 },
+    otpResendAfter: { type: Date, default: null },
+    isEmailVerified: { type: Boolean, default: false },
     type: {
       type: String,
       enum: allowedTypes,

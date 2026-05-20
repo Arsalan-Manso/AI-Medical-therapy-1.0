@@ -1,21 +1,27 @@
 const ContactMessage = require("../models/ContactMessage");
 const { sendMail } = require("../services/emailService");
+const { validateName, validateEmail, normalizeEmail } = require("../utils/authValidation");
 
 const submitPublicContact = async (req, res) => {
   try {
     const name = String(req.body.name || "").trim();
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
     const subject = String(req.body.subject || "").trim().slice(0, 200);
     const message = String(req.body.message || "").trim();
 
     if (!name || !email || !message) {
       return res.status(400).json({ message: "Name, email, and message are required." });
     }
+    if (!validateName(name)) {
+      return res.status(400).json({
+        message: "Name must contain letters only.",
+      });
+    }
     if (message.length < 5) {
       return res.status(400).json({ message: "Please write a slightly longer message." });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ message: "Please enter a valid email address." });
+    if (!validateEmail(email)) {
+      return res.status(400).json({ message: "Enter a valid email." });
     }
 
     const doc = await ContactMessage.create({ name, email, subject, message });
@@ -32,7 +38,7 @@ const submitPublicContact = async (req, res) => {
     });
   } catch (err) {
     console.error("submitPublicContact:", err);
-    return res.status(500).json({ message: "Could not send your message. Please try again later." });
+    return res.status(500).json({ message: "Could not send your message." });
   }
 };
 

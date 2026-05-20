@@ -526,24 +526,32 @@
 }
 
 .patient-doctor-card-row .patient-doctor-card-visual {
-  flex: 0 0 118px;
-  width: 118px;
-  min-height: 118px;
+  flex: 0 0 96px;
+  width: 96px;
+  min-height: 96px;
   display: flex;
-  align-self: stretch;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  padding-left: 14px;
   line-height: 0;
 }
 
 .patient-doctor-photo {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  min-height: 118px;
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid rgba(226, 232, 240, 0.9);
+  width: 76px;
+  height: 76px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 8px 20px -14px rgba(15, 23, 42, 0.55);
+  background: #f8fafc;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.patient-doctor-card-row:hover .patient-doctor-photo {
+  transform: scale(1.28);
+  border-color: rgba(20, 184, 166, 0.6);
+  box-shadow: 0 14px 28px -16px rgba(13, 148, 136, 0.7);
 }
 
 .patient-doctor-photo-letter {
@@ -617,17 +625,16 @@
 
   .patient-doctor-card-row .patient-doctor-card-visual {
     flex: none;
-    width: 100%;
-    min-height: 0;
-    max-height: none;
+    width: auto;
+    min-height: auto;
+    padding: 14px 14px 4px;
+    align-self: flex-start;
   }
 
   .patient-doctor-card-row .patient-doctor-photo {
-    aspect-ratio: 21 / 9;
-    min-height: 100px;
-    max-height: 140px;
-    border-right: none;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+    width: 68px;
+    height: 68px;
+    border-radius: 12px;
   }
 
   .patient-doctor-card-header {

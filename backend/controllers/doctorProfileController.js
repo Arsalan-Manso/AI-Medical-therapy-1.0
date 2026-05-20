@@ -3,6 +3,7 @@ const { SPECIALTY_SLUGS } = require("../constants/medicalSpecialties");
 const { PROVINCE_KEYS, isValidCityForProvince } = require("../constants/pakistanLocations");
 const { normalizePhone, isValidPkPhone } = require("../utils/pkValidation");
 const { publicDoctorUser } = require("./doctorRegisterController");
+const { validateName } = require("../utils/authValidation");
 
 const parseSpecialtiesUpdate = (body) => {
   if (Object.prototype.hasOwnProperty.call(body, "specialties")) {
@@ -35,6 +36,25 @@ const parseSpecialtiesUpdate = (body) => {
   return { slugs: undefined };
 };
 
+const ALLOWED_AVAILABILITY = new Set(["online", "physical", "both"]);
+const ALLOWED_WORKING_DAYS = new Set([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+]);
+
+const toNonNegativeFee = (value, label) => {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) {
+    return { error: `${label} must be a non-negative number` };
+  }
+  return { value: Math.round(num) };
+};
+
 const getDoctorProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
@@ -43,13 +63,25 @@ const getDoctorProfile = async (req, res) => {
     }
     return res.status(200).json({ user: publicDoctorUser(user) });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error." });
   }
 };
 
 const updateDoctorProfile = async (req, res) => {
   try {
-    const { name, profilePictureUrl, phone, province, city, address } = req.body;
+    const {
+      name,
+      profilePictureUrl,
+      phone,
+      province,
+      city,
+      address,
+      clinicAddress,
+      availabilityMode,
+      consultationFees,
+      workingDays,
+      timeSlots,
+    } = req.body;
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -62,7 +94,10 @@ const updateDoctorProfile = async (req, res) => {
     if (name !== undefined && name !== null) {
       const trimmed = String(name).trim();
       if (trimmed.length < 2) {
-        return res.status(400).json({ message: "Name must be at least 2 characters" });
+        return res.status(400).json({ message: "Name is too short." });
+      }
+      if (!validateName(trimmed)) {
+        return res.status(400).json({ message: "Name must contain letters only." });
       }
       user.name = trimmed;
       updated = true;
@@ -80,6 +115,57 @@ const updateDoctorProfile = async (req, res) => {
 
     if (profilePictureUrl !== undefined) {
       user.doctorProfile.profilePictureUrl = String(profilePictureUrl || "");
+      updated = true;
+    }
+
+    if (clinicAddress !== undefined) {
+      user.doctorProfile.clinicAddress = String(clinicAddress || "").trim().slice(0, 240);
+      updated = true;
+    }
+
+    if (availabilityMode !== undefined) {
+      const mode = String(availabilityMode || "").trim().toLowerCase();
+      if (mode && !ALLOWED_AVAILABILITY.has(mode)) {
+        return res.status(400).json({ message: "Availability must be online, physical, or both" });
+      }
+      user.doctorProfile.availabilityMode = mode || "both";
+      updated = true;
+    }
+
+    if (consultationFees !== undefined && consultationFees !== null) {
+      const fees = consultationFees || {};
+      const f30 = toNonNegativeFee(fees.fee30Min ?? 0, "30 minute fee");
+      if (f30.error) return res.status(400).json({ message: f30.error });
+      const f60 = toNonNegativeFee(fees.fee1Hour ?? 0, "1 hour fee");
+      if (f60.error) return res.status(400).json({ message: f60.error });
+      const f180 = toNonNegativeFee(fees.fee3Hour ?? 0, "3 hour fee");
+      if (f180.error) return res.status(400).json({ message: f180.error });
+      user.doctorProfile.consultationFees = {
+        fee30Min: f30.value,
+        fee1Hour: f60.value,
+        fee3Hour: f180.value,
+      };
+      updated = true;
+    }
+
+    if (workingDays !== undefined) {
+      if (!Array.isArray(workingDays)) {
+        return res.status(400).json({ message: "Working days must be an array" });
+      }
+      const normalized = [...new Set(workingDays.map((d) => String(d || "").trim().toLowerCase()))].filter(
+        (d) => ALLOWED_WORKING_DAYS.has(d)
+      );
+      user.doctorProfile.workingDays = normalized;
+      updated = true;
+    }
+
+    if (timeSlots !== undefined) {
+      if (!Array.isArray(timeSlots)) {
+        return res.status(400).json({ message: "Time slots must be an array" });
+      }
+      const normalized = [...new Set(timeSlots.map((s) => String(s || "").trim()).filter(Boolean))]
+        .slice(0, 24);
+      user.doctorProfile.timeSlots = normalized;
       updated = true;
     }
 
@@ -145,7 +231,7 @@ const updateDoctorProfile = async (req, res) => {
       user: publicDoctorUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error." });
   }
 };
 

@@ -4,6 +4,7 @@ import { useAuth } from "../context/useAuth";
 import { roleRouteSegment } from "../constants/roles";
 import { api, authHeader } from "../utils/api";
 import "../styles/PatientDashboard.css";
+import doctorIcon from "../assets/doctor.png";
 
 const genderOptions = [
   { value: "", label: "Select gender" },
@@ -133,7 +134,7 @@ const PatientDashboard = () => {
         gender: p?.gender || "",
         profilePictureUrl: p?.profilePictureUrl || "",
         phone: p?.phone || "",
-        contactEmail: p?.contactEmail || data.user?.email || "",
+        contactEmail: data.user?.email || "",
         city: p?.city || "",
         addressLine: p?.addressLine || "",
         emergencyContactName: p?.emergencyContactName || "",
@@ -292,7 +293,6 @@ const PatientDashboard = () => {
           gender: profileForm.gender,
           profilePictureUrl: profileForm.profilePictureUrl,
           phone: profileForm.phone.trim(),
-          contactEmail: profileForm.contactEmail.trim() || undefined,
           city: profileForm.city.trim(),
           addressLine: profileForm.addressLine.trim(),
           emergencyContactName: profileForm.emergencyContactName.trim(),
@@ -530,7 +530,7 @@ const PatientDashboard = () => {
                         )}
                         <div>
                           <dt>Email</dt>
-                          <dd>{savedProfile.contactEmail || user?.email}</dd>
+                          <dd>{user?.email || "—"}</dd>
                         </div>
                         {savedProfile.city && (
                           <div>
@@ -646,17 +646,19 @@ const PatientDashboard = () => {
                         <li key={d.id}>
                           <article className="patient-doctor-detail-card patient-doctor-card-row genz-card patient-genz-card">
                             <div className="patient-doctor-card-visual">
-                              <div
-                                className="patient-doctor-photo"
-                                aria-hidden
-                                style={{
-                                  background: `linear-gradient(145deg, hsl(${doctorCardHue(d.id)}, 40%, 38%), hsl(${(doctorCardHue(d.id) + 28) % 360}, 42%, 32%))`,
-                                }}
-                              >
-                                <span className="patient-doctor-photo-letter">
-                                  {d.name?.slice(0, 1)?.toUpperCase() || "D"}
-                                </span>
-                              </div>
+                              {d.profilePictureUrl ? (
+                                <img
+                                  src={d.profilePictureUrl}
+                                  alt={`${d.name} profile`}
+                                  className="patient-doctor-photo"
+                                />
+                              ) : (
+                                <img
+                                  src={doctorIcon}
+                                  alt="Doctor"
+                                  className="patient-doctor-photo"
+                                />
+                              )}
                             </div>
                             <div className="patient-doctor-card-body">
                               <div className="patient-doctor-card-header">
@@ -717,6 +719,38 @@ const PatientDashboard = () => {
                                     <dd>{d.practiceAddress}</dd>
                                   </div>
                                 ) : null}
+                                {d.clinicAddress ? (
+                                  <div className="patient-doctor-detail-span">
+                                    <dt>Clinic address</dt>
+                                    <dd>{d.clinicAddress}</dd>
+                                  </div>
+                                ) : null}
+                                <div>
+                                  <dt>Availability</dt>
+                                  <dd>{(d.availabilityMode || "both").replace("_", " ")}</dd>
+                                </div>
+                                <div>
+                                  <dt>Fees</dt>
+                                  <dd>
+                                    PKR{" "}
+                                    {d.consultationFees?.fee30Min ||
+                                      d.consultationFees?.fee1Hour ||
+                                      d.consultationFees?.fee3Hour ||
+                                      0}
+                                  </dd>
+                                </div>
+                                {Array.isArray(d.workingDays) && d.workingDays.length ? (
+                                  <div className="patient-doctor-detail-span">
+                                    <dt>Working days</dt>
+                                    <dd>{d.workingDays.join(", ")}</dd>
+                                  </div>
+                                ) : null}
+                                {Array.isArray(d.timeSlots) && d.timeSlots.length ? (
+                                  <div className="patient-doctor-detail-span">
+                                    <dt>Time slots</dt>
+                                    <dd>{d.timeSlots.join(", ")}</dd>
+                                  </div>
+                                ) : null}
                                 {d.memberSince ? (
                                   <div>
                                     <dt>On platform since</dt>
@@ -747,9 +781,9 @@ const PatientDashboard = () => {
             type="button"
             className="patient-ai-fab"
             aria-label="AI agent"
-            onClick={() => showModule("This is our 7th module.")}
+            onClick={() => navigate("/ai-chat")}
           >
-            ✨
+            <span aria-hidden>🤖</span>
           </button>
         )}
 
@@ -828,18 +862,17 @@ const PatientDashboard = () => {
                     />
                   </label>
                   <label className="profile-field">
-                    <span>Email address</span>
+                    <span>Login email</span>
                     <input
-                      name="contactEmail"
                       type="email"
-                      value={profileForm.contactEmail}
-                      onChange={onProfileChange}
+                      value={user?.email || profileForm.contactEmail}
                       autoComplete="email"
-                      placeholder={user?.email || "you@email.com"}
+                      disabled
+                      readOnly
                     />
                   </label>
                   <p className="profile-field-hint">
-                    Leave email blank to use your login email ({user?.email}).
+                    Email is linked to your account and cannot be edited in profile.
                   </p>
                   <label className="profile-field">
                     <span>City</span>
@@ -1041,6 +1074,11 @@ const PatientDashboard = () => {
                               {a.doctorMessage ? (
                                 <p className="appt-msg">Note: {a.doctorMessage}</p>
                               ) : null}
+                              {a.prescription ? (
+                                <p className="appt-msg">
+                                  <strong>Prescription:</strong> {a.prescription}
+                                </p>
+                              ) : null}
                             </div>
                             <span className="appt-pill appt-pill-approved">Approved</span>
                           </li>
@@ -1080,6 +1118,11 @@ const PatientDashboard = () => {
                               <span className="appt-spec">{a.specialtyLabel}</span>
                               {a.doctorMessage ? (
                                 <p className="appt-msg">{a.doctorMessage}</p>
+                              ) : null}
+                              {a.prescription ? (
+                                <p className="appt-msg">
+                                  <strong>Prescription:</strong> {a.prescription}
+                                </p>
                               ) : null}
                             </div>
                             <span className="appt-pill">{a.status}</span>
